@@ -38,15 +38,13 @@
 	    )
     (import (rnrs)
 	    (springkussen cipher symmetric scheme descriptor)
-	    (springkussen cipher symmetric key)
 	    (springkussen misc bitwise))
 
 (define-record-type aes-key
-  (parent <symmetric-key>)
   (fields ek dk nr)
   (protocol (lambda (p)
 	      (lambda (nr)
-		((p) (make-vector 60) (make-vector 60) nr)))))
+		(p (make-vector 60) (make-vector 60) nr)))))
 
 (define (setup-mix temp)
   (bitwise-xor (vector-ref Te4_3 (byte temp 2))

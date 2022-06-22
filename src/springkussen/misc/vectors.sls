@@ -1,6 +1,6 @@
 ;;; -*- mode:scheme; coding:utf-8; -*-
 ;;;
-;;; testing.sls - Test helper
+;;; springkussen/misc/vectors.sls - Misc vector operations
 ;;;  
 ;;;   Copyright (c) 2022  Takashi Kato  <ktakashi@ymail.com>
 ;;;   
@@ -29,35 +29,12 @@
 ;;;  
 
 #!r6rs
-(library (testing)
-    (export integer->bytevector
-	    bytevector->integer
-	    bytevector-append)
+(library (springkussen misc vectors)
+    (export vector-copy!)
     (import (rnrs))
-
-(define (integer->bytevector integer size)
-  (let ((bv (make-bytevector size 0)))
-    (do ((i 0 (+ i 1)))
-	((= i size) bv)
-      (let ((n (bitwise-and (bitwise-arithmetic-shift integer (* i -8)) #xFF)))
-	(bytevector-u8-set! bv (- size i 1) n)))))
-
-(define (bytevector->integer bv)
-  (define size (bytevector-length bv))
-  (let loop ((i 0) (r 0))
-    (if (= i size)
-	r
-	(loop (+ i 1)
-	      (bitwise-ior (bitwise-arithmetic-shift r 8)
-			   (bytevector-u8-ref bv i))))))
-
-(define (bytevector-append . bv*)
-  (define size
-    (fold-left (lambda (acc bv) (+ acc (bytevector-length bv))) 0 bv*))
-  (do ((r (make-bytevector size)) (bv* bv* (cdr bv*))
-       (start 0 (+ start (bytevector-length (car bv*)))))
-      ((null? bv*) r)
-    (bytevector-copy! (car bv*) 0 r start (bytevector-length (car bv*)))))
-    
-
+(define (vector-copy! src sstart dst dstart size)
+  (do ((si sstart (+ si 1)) (di dstart (+ di 1)) (size size (- size 1)))
+      ((zero? size))
+    (vector-set! dst di (vector-ref src si))))
 )
+
