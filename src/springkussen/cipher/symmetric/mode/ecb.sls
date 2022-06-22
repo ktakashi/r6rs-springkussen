@@ -32,6 +32,7 @@
 (library (springkussen cipher symmetric mode ecb)
     (export ecb-mode-descriptor)
     (import (rnrs)
+	    (springkussen conditions)
 	    (springkussen cipher symmetric mode descriptor)
 	    (springkussen cipher symmetric mode parameter)
 	    (springkussen cipher symmetric scheme descriptor))
@@ -49,7 +50,7 @@
   (define blocklen (symmetric-ecb-block-length ecb))
   (define pt-len (bytevector-length pt))
   (unless (zero? (mod pt-len blocklen))
-    (error 'ecb-encrypt "invalid argument"))
+    (springkussen-assertion-violation 'encrypt "invalid argument"))
   (let ((ct (make-bytevector (bytevector-length pt)))
 	(encrypt (symmetric-scheme-descriptor-encryptor
 		  (symmetric-ecb-spec ecb)))
@@ -59,14 +60,14 @@
 	  ct
 	  (let ((b (encrypt pt i ct i key)))
 	    (unless (= b blocklen) 
-	      (error 'ecb-encrypt "invalid encryption"))
+	      (springkussen-error 'encrypt "invalid encryption"))
 	    (loop (+ i blocklen)))))))
 
 (define (ecb-decrypt ecb ct)
   (define blocklen (symmetric-ecb-block-length ecb))
   (define ct-len (bytevector-length ct))
   (unless (zero? (mod ct-len blocklen))
-    (error 'ecb-decrypt "invalid argument"))
+    (springkussen-assertion-violation 'decrypt "invalid argument"))
   (let ((pt (make-bytevector (bytevector-length ct)))
 	(decrypt (symmetric-scheme-descriptor-decryptor
 		  (symmetric-ecb-spec ecb)))
@@ -76,7 +77,7 @@
 	  pt
 	  (let ((b (decrypt ct i pt i key)))
 	    (unless (= b blocklen)
-	      (error 'ecb-decrypt "invalid encryption"))
+	      (springkussen-error 'decrypt "invalid encryption"))
 	    (loop (+ i blocklen)))))))
 
 (define (ecb-done ecb)

@@ -1,6 +1,6 @@
 ;;; -*- mode:scheme; coding:utf-8; -*-
 ;;;
-;;; springkussen/cipher/symmetric/scheme/descriptor.sls - Scheme descriptor
+;;; springkussen/conditions.sls - General conditions
 ;;;  
 ;;;   Copyright (c) 2022  Takashi Kato  <ktakashi@ymail.com>
 ;;;   
@@ -29,42 +29,36 @@
 ;;;  
 
 #!r6rs
-(library (springkussen cipher symmetric scheme descriptor)
-    (export symmetric-scheme-descriptor-builder
-	    symmetric-scheme-descriptor?
-	    symmetric-scheme-descriptor-key-length*
-	    symmetric-scheme-descriptor-block-size
-	    symmetric-scheme-descriptor-default-round
-	    symmetric-scheme-descriptor-encryptor
-	    symmetric-scheme-descriptor-decryptor
+(library (springkussen conditions)
+    (export springkussen-condition? &springkussen
+	    springkussen-assertion-violation
+	    springkussen-error)
+    (import (rnrs))
 
-	    symmetric-scheme-descriptor:setup
-	    symmetric-scheme-descriptor:done
-	    )
-    (import (rnrs)
-	    (springkussen conditions)
-	    (springkussen misc record))
+(define-condition-type &springkussen &serious
+  make-springkussen-condition springkussen-condition?)
 
-(define-record-type symmetric-scheme-descriptor
-  (fields key-length*
-	  block-size
-	  default-round
-	  setupper
-	  encryptor
-	  decryptor
-	  finalizer))
+;; Input assertion
+(define (springkussen-assertion-violation who message . irr)
+  (raise (apply condition
+		(filter values
+			(list (make-springkussen-condition)
+			      (make-assertion-violation)
+			      (and who (make-who-condition who))
+			      (make-message-condition message)
+			      (and (not (null? irr))
+				   (make-irritants-condition irr)))))))
 
-(define-syntax symmetric-scheme-descriptor-builder
-  (make-record-builder symmetric-scheme-descriptor))
+;; Runtime error
+(define (springkussen-error who message . irr)
+  (raise (apply condition
+		(filter values
+			(list (make-springkussen-condition)
+			      (make-error)
+			      (and who (make-who-condition who))
+			      (make-message-condition message)
+			      (and (not (null? irr))
+				   (make-irritants-condition irr)))))))
 
-(define (symmetric-scheme-descriptor:setup desc key param)
-  (define allowed-key-length* (symmetric-scheme-descriptor-key-length* desc))
-  (unless (memq (bytevector-length key) allowed-key-length*)
-    (springkussen-assertion-violation 'symmetric-scheme-descriptor:setup
-     "Invalid key length" (bytevector-length key)))
-  ((symmetric-scheme-descriptor-setupper desc) key param))
-
-(define (symmetric-scheme-descriptor:done desc key)
-  ((symmetric-scheme-descriptor-finalizer desc) key))
 )
 

@@ -35,6 +35,7 @@
 	    desede-descriptor
 	    )
     (import (rnrs)
+	    (springkussen conditions)
 	    (springkussen cipher symmetric scheme descriptor)
 	    (springkussen misc bitwise)
 	    (springkussen misc vectors))
@@ -47,9 +48,7 @@
 
 (define (des-setup key round)
   (unless (or (zero? round) (= round 16))
-    (error 'des-setup "invalid round count" round))
-  (unless (= (bytevector-length key) 8)
-    (error 'des-setup "invalid key size" (bytevector-length key)))
+    (springkussen-assertion-violation 'setup "invalid round count" round))
   (let ((symmetric-key (make-des-key)))
     (deskey key 0 #f (des-key-ek symmetric-key))
     (deskey key 0 #t (des-key-dk symmetric-key))
@@ -63,6 +62,7 @@
   (store32h ct (+ cs 0) (vector-ref work 0))
   (store32h ct (+ cs 4) (vector-ref work 1))
   8)
+
 (define (des-decrypt ct cs pt ps key)
   (define work (make-vector 2))
   (vector-set! work 0 (load32h ct (+ cs 0)))
@@ -95,9 +95,7 @@
 (define (des3-setup key round)
   (define keylen (bytevector-length key))
   (unless (or (zero? round) (= round 16))
-    (error 'des-setup "invalid round count" round))
-  (unless (or (= keylen 24) (= keylen 16))
-    (error 'des-setup "invalid key size" keylen))
+    (springkussen-assertion-violation 'setup "invalid round count" round))
   (let ((symmetric-key (make-des3-key)))
     (deskey key 0 #f (des3-key-ek0 symmetric-key)) ;; en
     (deskey key 8 #t (des3-key-ek1 symmetric-key)) ;; de
@@ -134,10 +132,9 @@
   (store32h ct (+ cs 4) (vector-ref work 1))
   8)
 
-
 (define desede-descriptor
   (symmetric-scheme-descriptor-builder
-   (key-length* '(24))
+   (key-length* '(16 24))
    (block-size 8)
    (default-round 16)
    (setupper des3-setup)

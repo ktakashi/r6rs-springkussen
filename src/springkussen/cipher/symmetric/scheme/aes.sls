@@ -37,6 +37,7 @@
 	    aes-256-descriptor
 	    )
     (import (rnrs)
+	    (springkussen conditions)
 	    (springkussen cipher symmetric scheme descriptor)
 	    (springkussen misc bitwise))
 
@@ -55,13 +56,10 @@
 (define (aes-setup key round)
   (define keylen (bytevector-length key))
   (define (create-aes-key key round)
-    (case keylen
-      ((16 24 32)
-       (let ((nr (+ 10 (* (- (div keylen 8) 2) 2))))
-	 (unless (or (zero? round) (= round nr))
-	   (error "aes-setup: invalid round" round nr))
-	 (make-aes-key nr)))
-      (else (error "aes-setup: invalid key size" keylen))))
+    (let ((nr (+ 10 (* (- (div keylen 8) 2) 2))))
+      (unless (or (zero? round) (= round nr))
+	(springkussen-assertion-violation 'setup "invalid round" round nr))
+      (make-aes-key nr)))
   (define vset! vector-set!)
   (define vref vector-ref)
   (define bxor bitwise-xor)

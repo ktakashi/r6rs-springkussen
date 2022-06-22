@@ -1,9 +1,11 @@
 (import (rnrs)
+	(springkussen conditions)
 	(springkussen cipher symmetric scheme aes)
 	(springkussen cipher symmetric scheme des)
 	(springkussen cipher symmetric scheme descriptor)
 	(springkussen cipher symmetric mode ecb)
 	(springkussen cipher symmetric mode descriptor)
+	(springkussen cipher symmetric mode parameter)
 	(srfi :64)
 	(testing))
 
@@ -37,7 +39,100 @@
 		pt
 		(decrypt skey ct))))
 
+(define (test-ecb-start-error msg pred scheme key param)
+  (test-error msg pred
+   (symmetric-mode-descriptor:start ecb-mode-descriptor scheme key param)))
+
 (test-begin "ECB mode")
+
+(define (springkussen-assertion? c)
+  (and (assertion-violation? c) (springkussen-condition? c)))
+(test-ecb-start-error "Invalid key AES" springkussen-assertion?
+		      aes-descriptor 
+		      #vu8(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15) #f)
+(test-ecb-start-error "Invalid key AES 128 (1)" springkussen-assertion?
+		      aes-128-descriptor
+		      (bytevector-append
+		       #vu8(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16)
+		       #vu8(1 2 3 4 5 6 7 8 ))
+		      #f)
+(test-ecb-start-error "Invalid key AES 128 (2)" springkussen-assertion?
+		      aes-128-descriptor
+		      (bytevector-append
+		       #vu8(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16)
+		       #vu8(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16))
+		      #f)
+
+;; apparently, AES-128 round must be 0 or 10 
+(test-ecb-start-error "Invalid round AES 128" springkussen-assertion?
+		      aes-128-descriptor
+		      #vu8(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16)
+		      (make-round-parameter 9))
+
+(test-ecb-start-error "Invalid key AES 192 (1)" springkussen-assertion?
+		      aes-192-descriptor
+		      (bytevector-append
+		       #vu8(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16))
+		      #f)
+(test-ecb-start-error "Invalid key AES 128 (2)" springkussen-assertion?
+		      aes-192-descriptor
+		      (bytevector-append
+		       #vu8(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16)
+		       #vu8(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16))
+		      #f)
+;; apparently, AES-192 round must be 0 or 12
+(test-ecb-start-error "Invalid round AES 192" springkussen-assertion?
+		      aes-192-descriptor
+		      (bytevector-append
+		       #vu8(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16)
+		       #vu8(1 2 3 4 5 6 7 8))
+		      (make-round-parameter 11))
+
+(test-ecb-start-error "Invalid key AES 256 (1)" springkussen-assertion?
+		      aes-256-descriptor
+		      (bytevector-append
+		       #vu8(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16))
+		      #f)
+(test-ecb-start-error "Invalid key AES 256 (2)" springkussen-assertion?
+		      aes-256-descriptor
+		      (bytevector-append
+		       #vu8(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16)
+		       #vu8(1 2 3 4 5 6 7 8))
+		      #f)
+;; apparently, AES-256 round must be 0 or 14
+(test-ecb-start-error "Invalid round AES 256" springkussen-assertion?
+		      aes-256-descriptor
+		      (bytevector-append
+		       #vu8(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16)
+		       #vu8(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16))
+		      (make-round-parameter 13))
+
+(test-ecb-start-error "Invalid key DES" springkussen-assertion?
+		      des-descriptor #vu8(1 2 3 4 5 6 7) #f)
+;; Round must be 0 or 16
+(test-ecb-start-error "Invalid round DES " springkussen-assertion?
+		      des-descriptor
+		      #vu8(1 2 3 4 5 6 7 8)
+		      (make-round-parameter 9))
+
+(test-ecb-start-error "Invalid key DES3 " springkussen-assertion?
+		      desede-descriptor
+		      #vu8(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15)
+		      #f)
+(test-ecb-start-error "Invalid key DES3 " springkussen-assertion?
+		      desede-descriptor
+		      (bytevector-append
+		       #vu8(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16)
+		       #vu8(1 2 3 4 5 6 7))
+		      #f)
+;; Round must be 0 or 16
+(test-ecb-start-error "Invalid round DES3 " springkussen-assertion?
+		      desede-descriptor
+		      (bytevector-append
+		       #vu8(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16)
+		       #vu8(1 2 3 4 5 6 7 8))
+		      (make-round-parameter 9))
+
 
 (define test-aes-vectors
   '(
