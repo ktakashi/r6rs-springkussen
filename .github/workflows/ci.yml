@@ -1,0 +1,35 @@
+name: R6RS Springkussen
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  Ubuntu-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          path: target
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install libgc-dev zlib1g-dev libffi-dev curl
+      - name: Install scheme-env
+        run: |
+          curl https://raw.githubusercontent.com/ktakashi/scheme-env/master/bin/install.sh | bash
+          echo "$HOME/.scheme-env/bin" >> $GITHUB_PATH
+      - name: Install Implementations
+        run: |
+          scheme-env install sagittarius
+          scheme-env install chez
+      - name: Run test
+        working-directory: target
+        run: ./run-test.sh
+          
+        
