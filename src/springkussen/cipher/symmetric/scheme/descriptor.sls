@@ -59,9 +59,16 @@
 
 (define (symmetric-scheme-descriptor:setup desc key param)
   (define allowed-key-length* (symmetric-scheme-descriptor-key-length* desc))
-  (unless (memq (bytevector-length key) allowed-key-length*)
-    (springkussen-assertion-violation 'symmetric-scheme-descriptor:setup
-     "Invalid key length" (bytevector-length key)))
+  (if (list? allowed-key-length*)
+      ;; fixed list
+      (unless (memq (bytevector-length key) allowed-key-length*)
+	(springkussen-assertion-violation 'symmetric-scheme-descriptor:setup
+	 "Invalid key length" (bytevector-length key)))
+      ;; range
+      (let ((min (car allowed-key-length*)) (max (cdr allowed-key-length*)))
+	(unless (<= min (bytevector-length key) max)
+	  (springkussen-assertion-violation 'symmetric-scheme-descriptor:setup
+	   "Invalid key length" (bytevector-length key)))))
   ((symmetric-scheme-descriptor-setupper desc) key param))
 
 (define (symmetric-scheme-descriptor:done desc key)

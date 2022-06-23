@@ -2,6 +2,7 @@
 	(springkussen conditions)
 	(springkussen cipher symmetric scheme aes)
 	(springkussen cipher symmetric scheme des)
+	(springkussen cipher symmetric scheme rc5)
 	(springkussen cipher symmetric scheme descriptor)
 	(springkussen cipher symmetric mode ecb)
 	(springkussen cipher symmetric mode descriptor)
@@ -9,13 +10,14 @@
 	(srfi :64)
 	(testing))
 
-(define (test-ecb scheme vec)
+(define (test-ecb scheme vec . maybe-param)
+  (define param (and (not (null? maybe-param)) (car maybe-param)))
   (define block-size (symmetric-scheme-descriptor-block-size scheme))
   (let ((key (integer->bytevector (vector-ref vec 1) (vector-ref vec 0)))
 	(pt (integer->bytevector (vector-ref vec 2) block-size))
 	(ct (integer->bytevector (vector-ref vec 3) block-size)))
     (define skey
-      (symmetric-mode-descriptor:start ecb-mode-descriptor scheme key #f))
+      (symmetric-mode-descriptor:start ecb-mode-descriptor scheme key param))
     (define (encrypt skey pt)
       (symmetric-mode-descriptor:encrypt ecb-mode-descriptor skey pt))
     (define (decrypt skey ct)
@@ -219,6 +221,21 @@
 (for-each (lambda (v) (test-ecb desede-descriptor v))
 	  (map ->des3-key test-des-vectors))
 
+;; RC5
+;; We only support RC5-32/r/b, blocksize = 8
+(define test-rc5-vectors
+  '(
+    #(16 #x915f4619be41b2516355a50110a9ce91 #x21a5dbee154b8f6d #xf7c013ac5b2b8952)
+    #(16 #x783348e75aeb0f2fd7b169bb8dc16787 #xF7C013AC5B2B8952 #x2F42B3B70369FC92)
+    #(16 #xDC49db1375a5584f6485b413b5f12baf #x2F42B3B70369FC92 #x65c178b284d197cc)
+    ))
+(for-each (lambda (v) (test-ecb rc5-descriptor v)) test-rc5-vectors)
+;; From 
+;; https://tools.ietf.org/id/draft-krovetz-rc6-rc5-vectors-00.html
+(test-ecb rc5-descriptor
+	  '#(16 #x000102030405060708090A0B0C0D0E0F #x0001020304050607 #x2A0EDC0E9431FF73)
+	  (make-round-parameter 20))
+	  
+
 (test-end)
 
-;; TODO schemes

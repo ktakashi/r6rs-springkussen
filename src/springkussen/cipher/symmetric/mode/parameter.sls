@@ -40,7 +40,8 @@
 	    make-round-parameter round-parameter?        <round-parameter>
 	    parameter-round
 	    )
-    (import (rnrs))
+    (import (rnrs)
+	    (springkussen conditions))
 
     (define-record-type mode-parameter)
 
@@ -55,8 +56,8 @@
 		 (and (mode-parameter? (car params))
 		      (check (cdr params)))))
 	   (unless (check params)
-	     (error 'make-composite-parameter "mode-parameter is required"
-		    params))
+	     (springkussen-assertion-violation
+	      'make-composite-parameter "mode-parameter is required" params))
 	   ((p) (let loop ((params params) (r '()))
 		  (cond ((null? params) (reverse r))
 			((composite-parameter? (car params))
@@ -113,8 +114,8 @@
 	       (cond (p (real p))
 		     ((not (null? optional)) (car optional))
 		     (else 
-		      (error (string-append (symbol->string 'acc))
-			     "doesn't have the field")))))
+		      (springkussen-error (string-append (symbol->string 'acc))
+					  "doesn't have the field")))))
 	   ...))
 	;; entry point
 	((_ name ctr pred fields ...)
@@ -130,8 +131,9 @@
        (lambda (p)
 	 (lambda (iv)
 	   (unless (bytevector? iv)
-	     (error 'make-iv-paramater "iv must be a bytevector"))
-	   ((p) iv))))
+	     (springkussen-assertion-violation
+	      'make-iv-paramater "iv must be a bytevector"))
+	   ((p) (bytevector-copy iv)))))
       iv-parameter?
       (iv parameter-iv))
 
@@ -140,7 +142,8 @@
        (lambda (p) 
 	 (define (check type)
 	   (unless (memq type '(big little))
-	     (error 'make-counter-parameter "big or little is required" type)))
+	     (springkussen-assertion-violation
+	      'make-counter-parameter "big or little is required" type)))
 	 (case-lambda
 	  ((iv) ((p iv) 'big))
 	  ((iv type) (check type) ((p iv) type)))))

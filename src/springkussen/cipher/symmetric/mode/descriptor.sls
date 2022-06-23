@@ -35,8 +35,6 @@
 	    symmetric-mode-descriptor-starter
 	    symmetric-mode-descriptor-encryptor
 	    symmetric-mode-descriptor-decryptor
-	    symmetric-mode-descriptor-iv-setter
-	    symmetric-mode-descriptor-iv-getter
 	    symmetric-mode-descriptor-aad-updator
 	    symmetric-mode-descriptor-finalizer
 
@@ -44,8 +42,12 @@
 	    symmetric-mode-descriptor:encrypt
 	    symmetric-mode-descriptor:decrypt
 	    symmetric-mode-descriptor:done
+
+	    symmetric-mode-descriptor:set-iv!
+	    symmetric-mode-descriptor:get-iv
 	    )
     (import (rnrs)
+	    (springkussen conditions)
 	    (springkussen misc record))
 
 (define-record-type symmetric-mode-descriptor
@@ -71,5 +73,17 @@
 
 (define (symmetric-mode-descriptor:done desc mode-specific)
   ((symmetric-mode-descriptor-finalizer desc) mode-specific))
+
+(define (symmetric-mode-descriptor:set-iv! desc mode-specific iv)
+  (let ((setter (symmetric-mode-descriptor-iv-setter desc)))
+    (unless (procedure? setter)
+      (springkussen-assertion-violation 'set-iv "Not supported operation"))
+    (setter mode-specific iv)))
+
+(define (symmetric-mode-descriptor:get-iv desc mode-specific)
+  (let ((getter (symmetric-mode-descriptor-iv-getter desc)))
+    (unless (procedure? getter)
+      (springkussen-assertion-violation 'get-iv "Not supported operation"))
+    (getter mode-specific)))
 )
 
