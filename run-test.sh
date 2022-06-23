@@ -47,5 +47,15 @@ for impl in ${implementations[@]}; do
     echo
 done
 
+delete_link() {
+    target=$1
+    if [ -s ${target} ]; then
+	rm ${target}
+    fi
+}
+
+delete_link test/lib/srfi/:64.sls
+delete_link test/lib/srfi/:64
+
 echo Library test status ${EXIT_STATUS}
 exit ${EXIT_STATUS}
