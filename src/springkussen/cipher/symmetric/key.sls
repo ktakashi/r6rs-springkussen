@@ -29,14 +29,15 @@
 ;;;  
 
 #!r6rs
-;; The implementation is from aeolus, which is written by me :)
 (library (springkussen cipher symmetric key)
     (export (rename (symmetric-key <symmetric-key>))
-	    symmetric-key?)
+	    make-symmetric-key symmetric-key?
+	    symmetric-key-raw-value)
     (import (rnrs)
 	    (springkussen cipher key))
 
-;; just an interface
-(define-record-type symmetric-key (parent <key>))
+(define-record-type symmetric-key 
+  (parent <key>)
+  (fields raw-value))
 )
 
