@@ -47,6 +47,7 @@
 		    (aes-256-descriptor *scheme:aes-256*)
 		    (des-descriptor     *scheme:des*)
 		    (desede-descriptor  *scheme:desede*)
+		    (rc2-descriptor     *scheme:rc2*)
 		    (rc5-descriptor     *scheme:rc5*))
 
 	    ;; Mode descriptors
@@ -67,6 +68,7 @@
     (import (rnrs)
 	    (springkussen cipher symmetric scheme aes)
 	    (springkussen cipher symmetric scheme des)
+	    (springkussen cipher symmetric scheme rc2)
 	    (springkussen cipher symmetric scheme rc5)
 	    (springkussen cipher symmetric scheme descriptor)
 	    (springkussen cipher symmetric mode ecb)
@@ -159,8 +161,7 @@
   (define (pad bv block-size)
     (let* ((len (bytevector-length bv))
 	   (mod (mod len block-size))
-	   (t (- block-size mod))
-	   (padding (if (zero? t) block-size t)))
+	   (padding (- block-size mod)))
       (let ((new (make-bytevector (+ len padding) padding)))
 	(bytevector-copy! bv 0 new 0 len)
 	new)))

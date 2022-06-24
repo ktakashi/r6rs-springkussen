@@ -30,6 +30,7 @@
 (test-assert "Enc scheme" (symmetric-scheme-descriptor? *scheme:aes-256*))
 (test-assert "Enc scheme" (symmetric-scheme-descriptor? *scheme:des*))
 (test-assert "Enc scheme" (symmetric-scheme-descriptor? *scheme:desede*))
+(test-assert "Enc scheme" (symmetric-scheme-descriptor? *scheme:rc2*))
 (test-assert "Enc scheme" (symmetric-scheme-descriptor? *scheme:rc5*))
 
 (test-assert "Enc mode" (symmetric-mode-descriptor? *mode:ecb*))

@@ -48,7 +48,7 @@ In this library the following symmetric algorithms are supported
 - [x] AES
 - [x] DES
 - [x] Triple DES
-- [ ] RC2
+- [x] RC2
 - [x] RC5
 
 The above ciphers are required by

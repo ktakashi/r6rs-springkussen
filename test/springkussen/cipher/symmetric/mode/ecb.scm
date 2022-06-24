@@ -2,6 +2,7 @@
 	(springkussen conditions)
 	(springkussen cipher symmetric scheme aes)
 	(springkussen cipher symmetric scheme des)
+	(springkussen cipher symmetric scheme rc2)
 	(springkussen cipher symmetric scheme rc5)
 	(springkussen cipher symmetric scheme descriptor)
 	(springkussen cipher symmetric mode ecb)
@@ -235,7 +236,15 @@
 (test-ecb rc5-descriptor
 	  '#(16 #x000102030405060708090A0B0C0D0E0F #x0001020304050607 #x2A0EDC0E9431FF73)
 	  (make-round-parameter 20))
-	  
+
+
+;; RC2
+(define test-rc2-vectors
+  '(
+    #(8  #x3000000000000000 #x1000000000000001 #x30649edf9be7d2c2)
+    #(16 #x88bca90e90875a7f0f79c384627bafb2 #x0000000000000000 #x2269552ab0f85ca6)
+    ))
+(for-each (lambda (v) (test-ecb rc2-descriptor v)) test-rc2-vectors)
 
 (test-end)
 
