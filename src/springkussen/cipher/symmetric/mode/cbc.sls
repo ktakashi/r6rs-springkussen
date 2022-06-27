@@ -104,6 +104,7 @@
 
 (define cbc-mode-descriptor
   (symmetric-mode-descriptor-builder
+   (name "CBC")
    (starter cbc-start)
    (encryptor cbc-encrypt)
    (decryptor cbc-decrypt)

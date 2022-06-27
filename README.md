@@ -43,7 +43,7 @@ Symmetric ciphers
 
 ### Encryption schemes
 
-In this library the following symmetric algorithms are supported
+In this library, the following symmetric algorithms are supported
 
 - [x] AES
 - [x] DES
@@ -67,4 +67,26 @@ In this library the following encryption modes are supported.
 
 We may support more, such as counter mode or GCM, however,
 the same condition as encryption schemes  would be applied.
+
+
+Digest algorithms
+-----------------
+
+In this library, the following digest algorithms are supported
+
+- [ ] MD5
+- [x] SHA-1
+- [ ] SHA-224
+- [ ] SHA-256
+- [ ] SHA-384
+- [ ] SHA-512
+- [ ] SHA-512/224
+- [ ] SHA-512/256
+
+We *probably will* support SHA-3 and other algorithms in the near
+future, after PKCS is more or less supported.
+
+NOTE: we support the deprecated and/or vulnerable algorithms for
+backward compatibility, but users are strongly recommended **NOT**
+to use those algorithms, such as `MD5` or `SHA-1`.
 

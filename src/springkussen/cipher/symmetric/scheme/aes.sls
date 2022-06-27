@@ -251,6 +251,7 @@
 
 (define aes-descriptor
   (symmetric-scheme-descriptor-builder
+   (name "AES")
    (key-length* '(16 24 32))
    (block-size 16)
    (default-round 10)
@@ -261,6 +262,7 @@
 
 (define aes-128-descriptor
   (symmetric-scheme-descriptor-builder
+   (name "AES-128")
    (key-length* '(16))
    (block-size 16)
    (default-round 10)
@@ -271,6 +273,7 @@
 
 (define aes-192-descriptor
   (symmetric-scheme-descriptor-builder
+   (name "AES-192")
    (key-length* '(24))
    (block-size 16)
    (default-round 10)
@@ -281,6 +284,7 @@
 
 (define aes-256-descriptor
   (symmetric-scheme-descriptor-builder
+   (name "AES-256")
    (key-length* '(32))
    (block-size 16)
    (default-round 10)

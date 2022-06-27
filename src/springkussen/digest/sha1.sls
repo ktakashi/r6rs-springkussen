@@ -139,6 +139,7 @@
 
 (define sha1-descriptor
   (digest-descriptor-builder
+   (name "SHA-1")
    (digest-size 20)
    (oid "1.3.14.3.2.26")
    (initializer make-sha1)

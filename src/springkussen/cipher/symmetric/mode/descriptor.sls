@@ -32,6 +32,7 @@
 (library (springkussen cipher symmetric mode descriptor)
     (export symmetric-mode-descriptor-builder
 	    symmetric-mode-descriptor?
+	    symmetric-mode-descriptor-name
 	    symmetric-mode-descriptor-starter
 	    symmetric-mode-descriptor-encryptor
 	    symmetric-mode-descriptor-decryptor
@@ -51,7 +52,8 @@
 	    (springkussen misc record))
 
 (define-record-type symmetric-mode-descriptor
-  (fields starter
+  (fields name
+	  starter
 	  encryptor
 	  decryptor
 	  iv-setter

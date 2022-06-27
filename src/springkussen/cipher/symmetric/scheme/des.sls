@@ -77,6 +77,7 @@
 
 (define des-descriptor
   (symmetric-scheme-descriptor-builder
+   (name "DES")
    (key-length* '(8))
    (block-size 8)
    (default-round 16)
@@ -134,6 +135,7 @@
 
 (define desede-descriptor
   (symmetric-scheme-descriptor-builder
+   (name "DESede")
    (key-length* '(16 24))
    (block-size 8)
    (default-round 16)

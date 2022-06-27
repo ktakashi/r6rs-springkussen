@@ -32,6 +32,7 @@
 (library (springkussen cipher symmetric scheme descriptor)
     (export symmetric-scheme-descriptor-builder
 	    symmetric-scheme-descriptor?
+	    symmetric-scheme-descriptor-name
 	    symmetric-scheme-descriptor-key-length*
 	    symmetric-scheme-descriptor-block-size
 	    symmetric-scheme-descriptor-default-round
@@ -46,7 +47,8 @@
 	    (springkussen misc record))
 
 (define-record-type symmetric-scheme-descriptor
-  (fields key-length*
+  (fields name
+	  key-length*
 	  block-size
 	  default-round
 	  setupper

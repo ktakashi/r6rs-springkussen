@@ -86,6 +86,7 @@
 
 (define ecb-mode-descriptor
   (symmetric-mode-descriptor-builder
+   (name "ECB")
    (starter ecb-start)
    (encryptor ecb-encrypt)
    (decryptor ecb-decrypt)

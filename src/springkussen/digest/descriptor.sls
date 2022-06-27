@@ -32,6 +32,7 @@
 (library (springkussen digest descriptor)
     (export digest-descriptor?
 	    digest-descriptor-builder
+	    digest-descriptor-name
 	    digest-descriptor-digest-size
 	    digest-descriptor-oid
 
@@ -93,8 +94,8 @@
 ;; MD4 family styled digest
 (define-record-type block-digest-state
   (fields buffer
-	  (mutable count)
-	  (mutable length))
+	  (mutable count)   ;; buffer count
+	  (mutable length)) ;; processed length in bits
   (protocol (lambda (p)
 	      (lambda (n)
 		(p (make-bytevector n 0) 0 0)))))
