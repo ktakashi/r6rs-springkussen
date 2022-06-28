@@ -31,8 +31,9 @@
 #!r6rs
 ;; The implementation is from aeolus, which is written by me :)
 (library (springkussen misc bitwise)
-    (export byte bswap rol ror rolc rorc
-	    load32l load32h
+    (export byte bswap 
+	    rol ror rolc rorc ror64 ror64c
+	    load32l load32h load64l load64h
 	    store32l store32h store64h)
     (import (rnrs))
 
@@ -63,10 +64,30 @@
 (define rolc rol)
 (define rorc ror)
 
+(define (rol64 x y)
+  (bitwise-and
+   (bitwise-ior (bitwise-arithmetic-shift x (bitwise-and y 63))
+		(bitwise-arithmetic-shift-right
+		 (bitwise-and x #xFFFFFFFFFFFFFFFF)
+		 (bitwise-and (- 64 (bitwise-and y 63)) 63)))
+   #xFFFFFFFFFFFFFFFF))
+(define (ror64 x y)
+  (let ((w (bitwise-arithmetic-shift-right (bitwise-and x #xFFFFFFFFFFFFFFFF)
+					   (bitwise-and y 63)))
+	(z (bitwise-arithmetic-shift x (bitwise-and (- 64 (bitwise-and y 63))
+						    63))))
+    (bitwise-and (bitwise-ior w z) #xFFFFFFFFFFFFFFFF)))
+(define rol64c rol64)
+(define ror64c ror64)
+
 (define (load32l bv start)
   (bytevector-u32-ref bv start (endianness little)))
 (define (load32h bv start)
   (bytevector-u32-ref bv start (endianness big)))
+(define (load64l bv start)
+  (bytevector-u64-ref bv start (endianness little)))
+(define (load64h bv start)
+  (bytevector-u64-ref bv start (endianness big)))
 (define (store32l bv start v)
   (bytevector-u32-set! bv start v (endianness little)))
 (define (store32h bv start v)

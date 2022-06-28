@@ -79,11 +79,11 @@ In this library, the following digest algorithms are supported
 - [x] SHA-224
 - [x] SHA-256
 - [ ] SHA-384
-- [ ] SHA-512
+- [x] SHA-512
 - [ ] SHA-512/224
 - [ ] SHA-512/256
 
-We *probably will* support SHA-3 and other algorithms in the near
+We *will probably* support SHA-3 and other algorithms in the near
 future, after PKCS is more or less supported.
 
 NOTE: we support the deprecated and/or vulnerable algorithms for

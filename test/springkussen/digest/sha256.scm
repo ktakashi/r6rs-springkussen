@@ -5,7 +5,7 @@
 	(srfi :64)
 	(testing))
 
-(test-begin "SHA-1 digest")
+(test-begin "SHA-256 family digest")
 
 (define (make-sha256-test descriptor)
   (lambda (in out)
