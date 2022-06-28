@@ -30,7 +30,8 @@
 
 #!r6rs
 (library (springkussen digest sha256)
-    (export sha256-descriptor)
+    (export sha256-descriptor
+	    sha224-descriptor)
     (import (rnrs)
 	    (springkussen digest descriptor)
 	    (springkussen conditions)
@@ -49,7 +50,18 @@
 			       #x1F83D9AB
 			       #x5BE0CD19)))))))
 
-(define (u32 v) (bitwise-and v #xFFFFFFFF))
+(define-record-type sha224
+  (parent <block-digest-state>)
+  (protocol (lambda (n)
+	      (lambda ()
+		((n 64 (vector #xc1059ed8
+			       #x367cd507
+			       #x3070dd17
+			       #xf70e5939
+			       #xffc00b31
+			       #x68581511
+			       #x64f98fa7
+			       #xbefa4fa4)))))))
 
 (define K '#(
     #x428a2f98 #x71374491 #xb5c0fbcf #xe9b5dba5 #x3956c25b
@@ -133,6 +145,18 @@
    (digest-size 32)
    (oid "2.16.840.1.101.3.4.2.1")
    (initializer make-sha256)
+   (processor sha256-process)
+   (finalizer sha256-done)))
+
+(define sha256-done
+  (make-block-digest-finalizer sha256-compress 64 store32h 28))
+
+(define sha224-descriptor
+  (digest-descriptor-builder
+   (name "SHA-224")
+   (digest-size 28)
+   (oid "2.16.840.1.101.3.4.2.4")
+   (initializer make-sha224)
    (processor sha256-process)
    (finalizer sha256-done)))
 
