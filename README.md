@@ -78,7 +78,7 @@ In this library, the following digest algorithms are supported
 - [x] SHA-1
 - [x] SHA-224
 - [x] SHA-256
-- [ ] SHA-384
+- [x] SHA-384
 - [x] SHA-512
 - [ ] SHA-512/224
 - [ ] SHA-512/256

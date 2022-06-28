@@ -148,7 +148,7 @@
    (processor sha256-process)
    (finalizer sha256-done)))
 
-(define sha256-done
+(define sha224-done
   (make-block-digest-finalizer sha256-compress 64 store32h 28))
 
 (define sha224-descriptor
@@ -158,6 +158,6 @@
    (oid "2.16.840.1.101.3.4.2.4")
    (initializer make-sha224)
    (processor sha256-process)
-   (finalizer sha256-done)))
+   (finalizer sha224-done)))
 
 )

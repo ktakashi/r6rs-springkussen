@@ -30,7 +30,8 @@
 
 #!r6rs
 (library (springkussen digest sha512)
-    (export sha512-descriptor)
+    (export sha512-descriptor
+	    sha384-descriptor)
     (import (rnrs)
 	    (springkussen digest descriptor)
 	    (springkussen conditions)
@@ -48,6 +49,19 @@
 				#x9b05688c2b3e6c1f
 				#x1f83d9abfb41bd6b
 				#x5be0cd19137e2179)))))))
+
+(define-record-type sha384
+  (parent <block-digest-state>)
+  (protocol (lambda (n)
+	      (lambda ()
+		((n 128 (vector #xcbbb9d5dc1059ed8
+				#x629a292a367cd507
+				#x9159015a3070dd17
+				#x152fecd8f70e5939
+				#x67332667ffc00b31
+				#x8eb44a8768581511
+				#xdb0c2e0d64f98fa7
+				#x47b5481dbefa4fa4)))))))
 
 (define K '#(#x428a2f98d728ae22 #x7137449123ef65cd 
 	     #xb5c0fbcfec4d3b2f #xe9b5dba58189dbbc
@@ -155,5 +169,17 @@
    (initializer make-sha512)
    (processor sha512-process)
    (finalizer sha512-done)))
+
+(define sha384-done
+  (make-block-digest-finalizer sha512-compress 128 store64h 48))
+
+(define sha384-descriptor
+  (digest-descriptor-builder
+   (name "SHA-384")
+   (digest-size 48)
+   (oid "2.16.840.1.101.3.4.2.2")
+   (initializer make-sha384)
+   (processor sha512-process)
+   (finalizer sha384-done)))
 
 )
