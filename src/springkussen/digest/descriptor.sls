@@ -184,6 +184,6 @@
       (comp state buffer 0)
       (do ((i 0 (+ i 1)) (l (div size len/2)))
 	  ((= i l) out)
-	(storeh out (* i len/2) (bitwise-and mask (vector-ref S i)))))))
+	(storeh out (+ (* i len/2) pos) (bitwise-and mask (vector-ref S i)))))))
     
 )

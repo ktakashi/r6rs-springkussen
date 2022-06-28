@@ -31,7 +31,10 @@
 #!r6rs
 (library (springkussen digest sha512)
     (export sha512-descriptor
-	    sha384-descriptor)
+	    sha384-descriptor
+	    sha512/224-descriptor
+	    sha512/256-descriptor
+	    )
     (import (rnrs)
 	    (springkussen digest descriptor)
 	    (springkussen conditions)
@@ -62,6 +65,32 @@
 				#x8eb44a8768581511
 				#xdb0c2e0d64f98fa7
 				#x47b5481dbefa4fa4)))))))
+
+(define-record-type sha512/224
+  (parent <block-digest-state>)
+  (protocol (lambda (n)
+	      (lambda ()
+		((n 128 (vector #x8C3D37C819544DA2
+				#x73E1996689DCD4D6
+				#x1DFAB7AE32FF9C82
+				#x679DD514582F9FCF
+				#x0F6D2B697BD44DA8
+				#x77E36F7304C48942
+				#x3F9D85A86A1D36C8
+				#x1112E6AD91D692A1)))))))
+
+(define-record-type sha512/256
+  (parent <block-digest-state>)
+  (protocol (lambda (n)
+	      (lambda ()
+		((n 128 (vector #x22312194FC2BF72C
+				#x9F555FA3C84C64C2
+				#x2393B86B6F53B151
+				#x963877195940EABD
+				#x96283EE2A88EFFE3
+				#xBE5E1E2553863992
+				#x2B0199FC2C85B8AA
+				#x0EB72DDC81C52CA2)))))))
 
 (define K '#(#x428a2f98d728ae22 #x7137449123ef65cd 
 	     #xb5c0fbcfec4d3b2f #xe9b5dba58189dbbc
@@ -181,5 +210,35 @@
    (initializer make-sha384)
    (processor sha512-process)
    (finalizer sha384-done)))
+
+;; make-block-digest-finalizer only works when the digest-size is multiple of 8
+;; So wrap a bit
+(define sha512/224-done
+  (let ((dummy-done
+	 (make-block-digest-finalizer sha512-compress 128 store64h 32)))
+    (lambda (state out pos)
+      (let ((buf (make-bytevector 32)))
+	(dummy-done state buf 0)
+	(bytevector-copy! buf 0 out pos 28)
+	out))))
+(define sha512/224-descriptor
+  (digest-descriptor-builder
+   (name "SHA-512/224")
+   (digest-size 28)
+   (oid "2.16.840.1.101.3.4.2.5")
+   (initializer make-sha512/224)
+   (processor sha512-process)
+   (finalizer sha512/224-done)))
+
+(define sha512/256-done
+  (make-block-digest-finalizer sha512-compress 128 store64h 32))
+(define sha512/256-descriptor
+  (digest-descriptor-builder
+   (name "SHA-512/256")
+   (digest-size 32)
+   (oid "2.16.840.1.101.3.4.2.6")
+   (initializer make-sha512/256)
+   (processor sha512-process)
+   (finalizer sha512/256-done)))
 
 )

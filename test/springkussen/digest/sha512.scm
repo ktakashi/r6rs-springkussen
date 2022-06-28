@@ -10,11 +10,17 @@
 (define (make-sha512-test descriptor)
   (lambda (in out)
     (test-equal out (digest-descriptor:digest descriptor in))
-    (let ((state (digest-descriptor:init descriptor))
-	  (o (make-bytevector (digest-descriptor-digest-size descriptor))))
+    (let* ((state (digest-descriptor:init descriptor))
+	   (size (digest-descriptor-digest-size descriptor))
+	   (o (make-bytevector (+ size 1) 0)))
       (digest-descriptor:process! descriptor state in 0 1)
       (digest-descriptor:process! descriptor state in 1)
-      (test-equal out (digest-descriptor:done! descriptor state o)))))
+      (let ((v (digest-descriptor:done! descriptor state o 1))
+	    (buf (make-bytevector size)))
+	(test-equal o v) ;; the same bytevector ;)
+	(test-equal 0 (bytevector-u8-ref o 0))
+	(bytevector-copy! o 1 buf 0 size)
+	(test-equal out buf)))))
     
 (define test-sha512 (make-sha512-test sha512-descriptor))
 
@@ -74,5 +80,51 @@
 ;; 2 blocks
 (test-sha384 (string->utf8 two-blocks-data)
 	     (hex-string->bytevector "63035e46d55c1dd6f90e65a8b5c6280ba0b8ec44b9318187b65b593fb5b3483a456dd622b4ca56f6aaadc94f1ca63201"))
+
+(define test-sha512/224 (make-sha512-test sha512/224-descriptor))
+
+(test-assert (digest-descriptor? sha512/224-descriptor))
+(test-equal 28 (digest-descriptor-digest-size sha512/224-descriptor))
+(test-equal "2.16.840.1.101.3.4.2.5" (digest-descriptor-oid sha512/224-descriptor))
+
+(test-sha512/224 (string->utf8 "abc")
+		 #vu8(#x46 #x34 #x27 #x0F #x70 #x7B #x6A #x54
+		      #xDA #xAE #x75 #x30 #x46 #x08 #x42 #xE2
+		      #x0E #x37 #xED #x26 #x5C #xEE #xE9 #xA4
+		      #x3E #x89 #x24 #xAA))
+
+(test-sha512/224 (string->utf8 "abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu")
+		 #vu8(#x23 #xFE #xC5 #xBB #x94 #xD6 #x0B #x23
+		      #x30 #x81 #x92 #x64 #x0B #x0C #x45 #x33
+		      #x35 #xD6 #x64 #x73 #x4F #xE4 #x0E #x72
+		      #x68 #x67 #x4A #xF9))
+
+;; 2 blocks
+(test-sha512/224 (string->utf8 two-blocks-data)
+		 (hex-string->bytevector "e52f6eba8c477ef96d15af89e5e524e4417747840eab58e13492aec2"))
+
+
+(define test-sha512/256 (make-sha512-test sha512/256-descriptor))
+
+(test-assert (digest-descriptor? sha512/256-descriptor))
+(test-equal 32 (digest-descriptor-digest-size sha512/256-descriptor))
+(test-equal "2.16.840.1.101.3.4.2.6" (digest-descriptor-oid sha512/256-descriptor))
+
+(test-sha512/256 (string->utf8 "abc")
+		 #vu8(#x53 #x04 #x8E #x26 #x81 #x94 #x1E #xF9
+		      #x9B #x2E #x29 #xB7 #x6B #x4C #x7D #xAB
+		      #xE4 #xC2 #xD0 #xC6 #x34 #xFC #x6D #x46
+		      #xE0 #xE2 #xF1 #x31 #x07 #xE7 #xAF #x23))
+
+(test-sha512/256 (string->utf8 "abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu")
+		 #vu8(#x39 #x28 #xE1 #x84 #xFB #x86 #x90 #xF8
+		      #x40 #xDA #x39 #x88 #x12 #x1D #x31 #xBE
+		      #x65 #xCB #x9D #x3E #xF8 #x3E #xE6 #x14
+		      #x6F #xEA #xC8 #x61 #xE1 #x9B #x56 #x3A))
+
+;; 2 blocks
+(test-sha512/256 (string->utf8 two-blocks-data)
+		 (hex-string->bytevector "51bcc2297929198f1cf6e93c3fac09591a468ed9481a904f863369c132bd1560"))
+
 
 (test-end)

@@ -80,8 +80,8 @@ In this library, the following digest algorithms are supported
 - [x] SHA-256
 - [x] SHA-384
 - [x] SHA-512
-- [ ] SHA-512/224
-- [ ] SHA-512/256
+- [x] SHA-512/224
+- [x] SHA-512/256
 
 We *will probably* support SHA-3 and other algorithms in the near
 future, after PKCS is more or less supported.
