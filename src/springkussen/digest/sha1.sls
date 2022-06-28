@@ -38,17 +38,14 @@
 
 (define-record-type sha1
   (parent <block-digest-state>)
-  (fields state)
   (protocol (lambda (n)
 	      (lambda ()
-		((n 64)
-		 (vector #x67452301
-			 #xefcdab89
-			 #x98badcfe
-			 #x10325476
-			 #xc3d2e1f0))))))
+		((n 64 (vector #x67452301
+			       #xefcdab89
+			       #x98badcfe
+			       #x10325476
+			       #xc3d2e1f0)))))))
 
-(define (u32 v) (bitwise-and v #xFFFFFFFF))
 (define (sha1-compress sha1 buffer start)
   (define (setup-w buffer start)
     (define (expand W)
@@ -87,7 +84,7 @@
 			((b d) (ff W c d e a b (+ i 3)))
 			((a c) (ff W b c d e a (+ i 4))))
 	    (loop (+ i 5) a b c d e)))))
-  (define state (sha1-state sha1))
+  (define state (block-digest-state-state sha1))
   (let ((W (setup-w buffer start))
 	(a (vector-ref state 0))
 	(b (vector-ref state 1))
@@ -106,36 +103,7 @@
 
 (define sha1-process (make-block-digest-processor sha1-compress 64))
 
-(define (sha1-done sha1 out pos)
-  (define buffer (block-digest-state-buffer sha1))
-  (define count (block-digest-state-count sha1))
-  (define (check-compress buffer count)
-    (if (> count 56)
-	(do ((i count (+ i 1)))
-	    ((= i 64) (sha1-compress sha1 buffer 0) 0)
-	  (bytevector-u8-set! buffer i 0))
-	count))
-  (define (pad-zeros buffer count)
-    (if (< count 56)
-	(do ((i count (+ i 1)))
-	    ((= i 56) i)
-	  (bytevector-u8-set! buffer i 0))
-	count))
-  (when (> count (bytevector-length buffer))
-    (springkussen-assertion-violation 'sha1-done "Invalid argument" sha1))
-  (bytevector-u8-set! buffer count #x80) ;; append the 1 bit
-  (let* ((len   (block-digest-state-length-add! sha1 (* count 8)))
-	 (count (check-compress buffer (+ count 1)))
-	 (count (pad-zeros buffer count))
-	 (state (sha1-state sha1)))
-    (store64h buffer 56 len)
-    (sha1-compress sha1 buffer 0)
-    (store32h out         0  (u32 (vector-ref state 0)))
-    (store32h out (+ pos  4) (u32 (vector-ref state 1)))
-    (store32h out (+ pos  8) (u32 (vector-ref state 2)))
-    (store32h out (+ pos 12) (u32 (vector-ref state 3)))
-    (store32h out (+ pos 16) (u32 (vector-ref state 4)))
-    out))
+(define sha1-done (make-block-digest-finalizer sha1-compress 64 store32h 20))
 
 (define sha1-descriptor
   (digest-descriptor-builder

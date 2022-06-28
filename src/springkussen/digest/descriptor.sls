@@ -46,18 +46,21 @@
 	    (rename (digest-state <digest-state>)
 		    (block-digest-state <block-digest-state>))
 	    block-digest-state-buffer
+	    block-digest-state-state
 	    block-digest-state-count
 	    block-digest-state-count-add!
 	    block-digest-state-length
 	    block-digest-state-length-add!
 	    make-block-digest-processor
+	    make-block-digest-finalizer
 	    )
     (import (rnrs)
 	    (springkussen conditions)
 	    (springkussen misc record))
 
 (define-record-type digest-descriptor
-  (fields digest-size		   ; Digest size in octets
+  (fields name
+	  digest-size		   ; Digest size in octets
 	  oid			   ; Digest OID (#f if not registered)
 	  initializer
 	  processor
@@ -94,11 +97,12 @@
 ;; MD4 family styled digest
 (define-record-type block-digest-state
   (fields buffer
+	  state		    ;; mutable state
 	  (mutable count)   ;; buffer count
 	  (mutable length)) ;; processed length in bits
   (protocol (lambda (p)
-	      (lambda (n)
-		(p (make-bytevector n 0) 0 0)))))
+	      (lambda (n s)
+		(p (make-bytevector n 0) s 0 0)))))
 
 (define (block-digest-state-count-add! digest n)
   (let ((v (+ n (block-digest-state-count digest))))
@@ -141,4 +145,45 @@
 			 (else
 			  (loop (+ c n) (- inlen n) (+ start n)))))))))))
 
+(define (make-block-digest-finalizer compress block storeh size)
+  (define comp compress)
+  (define block-size block)
+  (define length-bytes (div block-size 8)) ;; it's just a coinsidence I think
+  (define block-w/o-len (- block-size length-bytes))
+  (define block-size/2 (div block-size 2))
+  (define mask (- (bitwise-arithmetic-shift 1 block-size/2) 1))
+
+  (lambda (state out pos)
+    (define buffer (block-digest-state-buffer state))
+    (define count (block-digest-state-count state))
+    (define (check-compress buffer count)
+      (if (> count block-w/o-len)
+	  (do ((i count (+ i 1)))
+	      ((= i block-size) (comp state buffer 0) 0)
+	    (bytevector-u8-set! buffer i 0))
+	  count))
+    (define (pad-zeros buffer count)
+      (if (< count block-w/o-len)
+	  (do ((i count (+ i 1)))
+	      ((= i block-w/o-len) i)
+	    (bytevector-u8-set! buffer i 0))
+	  count))
+    (when (> count (bytevector-length buffer))
+      (springkussen-assertion-violation 'digest-done "Invalid argument"))
+    (bytevector-u8-set! buffer count #x80)
+    (let* ((len   (block-digest-state-length-add! state (* count 8)))
+	   (count (check-compress buffer (+ count 1)))
+	   (count (pad-zeros buffer count))
+	   (S (block-digest-state-state state))
+	   (len/2 (div length-bytes 2)))
+      (let ((hi (bitwise-and (bitwise-arithmetic-shift-right len block-size/2)
+			     mask))
+	    (lo (bitwise-and len mask)))
+	(storeh buffer block-w/o-len hi)
+	(storeh buffer (+ block-w/o-len len/2) lo))
+      (comp state buffer 0)
+      (do ((i 0 (+ i 1)) (l (div size len/2)))
+	  ((= i l) out)
+	(storeh out (* i len/2) (bitwise-and mask (vector-ref S i)))))))
+    
 )
