@@ -36,11 +36,12 @@
 	    symmetric-scheme-descriptor-key-length*
 	    symmetric-scheme-descriptor-block-size
 	    symmetric-scheme-descriptor-default-round
-	    symmetric-scheme-descriptor-encryptor
-	    symmetric-scheme-descriptor-decryptor
+	    
 
 	    symmetric-scheme-descriptor:setup
 	    symmetric-scheme-descriptor:done
+	    symmetric-scheme-descriptor:encrypt
+	    symmetric-scheme-descriptor:decrypt
 	    )
     (import (rnrs)
 	    (springkussen conditions)
@@ -72,6 +73,14 @@
 	  (springkussen-assertion-violation 'symmetric-scheme-descriptor:setup
 	   "Invalid key length" (bytevector-length key)))))
   ((symmetric-scheme-descriptor-setupper desc) key param))
+
+(define (symmetric-scheme-descriptor:encrypt desc key pt ps ct cs)
+  (define encryptor (symmetric-scheme-descriptor-encryptor desc))
+  (encryptor pt ps ct cs key))
+
+(define (symmetric-scheme-descriptor:decrypt desc key ct cs pt ps)
+  (define decryptor (symmetric-scheme-descriptor-decryptor desc))
+  (decryptor ct cs pt ps key))
 
 (define (symmetric-scheme-descriptor:done desc key)
   ((symmetric-scheme-descriptor-finalizer desc) key))

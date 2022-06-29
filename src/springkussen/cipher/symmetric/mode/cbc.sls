@@ -61,17 +61,17 @@
   (define blocklen (symmetric-cbc-block-length cbc))
   (define pt-len (bytevector-length pt))
   (define iv (symmetric-cbc-iv cbc))
-  
+  (define spec (symmetric-cbc-spec cbc))
+  (define (encrypt key pt ps ct cs)
+    (symmetric-scheme-descriptor:encrypt spec key pt ps ct cs))
   (unless (zero? (mod pt-len blocklen))
     (springkussen-assertion-violation 'encrypt "invalid argument"))
   (let ((ct (make-bytevector (bytevector-length pt)))
-	(encrypt (symmetric-scheme-descriptor-encryptor
-		  (symmetric-cbc-spec cbc)))
 	(key (symmetric-cbc-key cbc)))
     (let loop ((i 0))
       (if (= i pt-len)
 	  ct
-	  (let ((b (encrypt (bytevector-xor! iv 0 pt i blocklen) 0 ct i key)))
+	  (let ((b (encrypt key (bytevector-xor! iv 0 pt i blocklen) 0 ct i)))
 	    (unless (= b blocklen) 
 	      (springkussen-error 'encrypt "invalid encryption"))
 	    (bytevector-copy! ct i iv 0 blocklen)
@@ -81,17 +81,17 @@
   (define blocklen (symmetric-cbc-block-length cbc))
   (define ct-len (bytevector-length ct))
   (define iv (symmetric-cbc-iv cbc))
-  
+  (define spec (symmetric-cbc-spec cbc))
+  (define (decrypt key ct cs pt ps)
+    (symmetric-scheme-descriptor:decrypt spec key ct cs pt ps))
   (unless (zero? (mod ct-len blocklen))
     (springkussen-assertion-violation 'decrypt "invalid argument"))
   (let ((pt (make-bytevector (bytevector-length ct)))
-	(decrypt (symmetric-scheme-descriptor-decryptor
-		  (symmetric-cbc-spec cbc)))
 	(key (symmetric-cbc-key cbc)))
     (let loop ((i 0))
       (if (= i ct-len)
 	  pt
-	  (let ((b (decrypt ct i pt i key)))
+	  (let ((b (decrypt key ct i pt i)))
 	    (unless (= b blocklen)
 	      (springkussen-error 'decrypt "invalid decryption"))
 	    (bytevector-xor! pt i iv 0 blocklen)
