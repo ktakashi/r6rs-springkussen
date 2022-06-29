@@ -67,11 +67,21 @@
 (define (symmetric-mode-descriptor:start desc scheme key param)
   ((symmetric-mode-descriptor-starter desc) scheme key param))
 
-(define (symmetric-mode-descriptor:encrypt desc mode-specific pt)
-  ((symmetric-mode-descriptor-encryptor desc) mode-specific pt))
+(define symmetric-mode-descriptor:encrypt
+  (case-lambda
+   ((desc mode-specific pt)
+    (let ((out (make-bytevector (bytevector-length pt))))
+      (symmetric-mode-descriptor:encrypt desc mode-specific pt 0 out 0)))
+   ((desc mode-specific pt ps out pos)
+    ((symmetric-mode-descriptor-encryptor desc) mode-specific pt ps out pos))))
 
-(define (symmetric-mode-descriptor:decrypt desc mode-specific ct)
-  ((symmetric-mode-descriptor-decryptor desc) mode-specific ct))
+(define symmetric-mode-descriptor:decrypt
+  (case-lambda
+   ((desc mode-specific ct)
+    (let ((out (make-bytevector (bytevector-length ct))))
+      (symmetric-mode-descriptor:decrypt desc mode-specific ct 0 out 0)))
+   ((desc mode-specific ct cs out pos)
+    ((symmetric-mode-descriptor-decryptor desc) mode-specific ct cs out pos))))
 
 (define (symmetric-mode-descriptor:done desc mode-specific)
   ((symmetric-mode-descriptor-finalizer desc) mode-specific))
