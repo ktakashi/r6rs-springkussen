@@ -11,6 +11,10 @@ Springkussen _will be_ a yet another cryptographic library for R6RS scheme
 implementations. The goal for this library is to provide comprehensive 
 cryptographic operations, including PKCS and/or PKI.
 
+Document
+--------
+
+See [./doc/overview.md](./doc/overview.md)
 
 Design
 ------
