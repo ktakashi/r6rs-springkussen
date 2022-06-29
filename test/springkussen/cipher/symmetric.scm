@@ -25,6 +25,7 @@
 	    (symmetric-cipher-spec-builder (scheme *scheme:aes*)))
 
 (test-assert "Enc scheme" (symmetric-scheme-descriptor? *scheme:aes*))
+(test-equal 16 (symmetric-scheme-descriptor-block-size *scheme:aes*))
 (test-assert "Enc scheme" (symmetric-scheme-descriptor? *scheme:aes-128*))
 (test-assert "Enc scheme" (symmetric-scheme-descriptor? *scheme:aes-192*))
 (test-assert "Enc scheme" (symmetric-scheme-descriptor? *scheme:aes-256*))
@@ -61,5 +62,36 @@
 			#vu8(1 2 3 4 5 6 7 8 9 10)
 			(make-iv-paramater
 			 #vu8(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16))))
+
+;; Found bug on CBC...
+(let ()
+  (define aes/cbc 
+    (symmetric-cipher-spec-builder
+     (scheme *scheme:aes*)
+     (mode   *mode:cbc*)))
+
+  (define cipher-mode-parameter
+    (make-mode-parameter
+     (make-iv-paramater
+      ;; IV must be the same as the block size.
+      ;; NOTE: this is an example, so don't use this in production code.
+      ;;       IV must be generated properly with secure random generator
+      (make-bytevector (symmetric-scheme-descriptor-block-size *scheme:aes*) 0))))
+
+  ;; AES uses key size of 16 bytes to 32 bytes, but here we use 16
+  (define key (make-symmetric-key #vu8(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15)))
+
+  (define (encrypt-text key text)
+    ;; A cipher may not be reusable, if it holds a state, such as IV
+    (let ((cipher (make-symmetric-cipher aes/cbc key cipher-mode-parameter)))
+      (symmetric-cipher:encrypt-bytevector cipher (string->utf8 text))))
+
+  (define (decrypt-text key bv)
+    ;; A cipher may not be reusable, if it holds a state, such as IV
+    (let ((cipher (make-symmetric-cipher aes/cbc key cipher-mode-parameter)))
+      (utf8->string (symmetric-cipher:decrypt-bytevector cipher bv))))
+
+  (let ((text "Jumping on Springkussen"))
+    (test-equal text (decrypt-text key (encrypt-text key text)))))
 
 (test-end)

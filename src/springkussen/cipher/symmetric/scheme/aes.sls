@@ -169,7 +169,6 @@
 		   (Te2 (byte s2 1))
 		   (Te3 (byte s3 0))
 		   (vector-ref rk rki)))
-
     (let loop ((r (div nr 2))
 	       (rki 0)
 	       (s0 (bitwise-xor (load32h pt ps)        (vector-ref rk 0)))

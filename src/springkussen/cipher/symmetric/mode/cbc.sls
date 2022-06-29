@@ -64,7 +64,6 @@
   
   (unless (zero? (mod pt-len blocklen))
     (springkussen-assertion-violation 'encrypt "invalid argument"))
-
   (let ((ct (make-bytevector (bytevector-length pt)))
 	(encrypt (symmetric-scheme-descriptor-encryptor
 		  (symmetric-cbc-spec cbc)))
@@ -72,9 +71,10 @@
     (let loop ((i 0))
       (if (= i pt-len)
 	  ct
-	  (let ((b (encrypt (bytevector-xor! iv 0 pt i blocklen) i ct i key)))
+	  (let ((b (encrypt (bytevector-xor! iv 0 pt i blocklen) 0 ct i key)))
 	    (unless (= b blocklen) 
 	      (springkussen-error 'encrypt "invalid encryption"))
+	    (bytevector-copy! ct i iv 0 blocklen)
 	    (loop (+ i blocklen)))))))
 
 (define (cbc-decrypt cbc ct)
@@ -93,7 +93,7 @@
 	  pt
 	  (let ((b (decrypt ct i pt i key)))
 	    (unless (= b blocklen)
-	      (springkussen-error 'decrypt "invalid encryption"))
+	      (springkussen-error 'decrypt "invalid decryption"))
 	    (bytevector-xor! pt i iv 0 blocklen)
 	    (bytevector-xor! iv 0 ct i blocklen)
 	    (loop (+ i blocklen)))))))

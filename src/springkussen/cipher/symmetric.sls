@@ -41,6 +41,8 @@
 	    
 	    ;; Scheme descriptors
 	    symmetric-scheme-descriptor?
+	    symmetric-scheme-descriptor-name
+	    symmetric-scheme-descriptor-block-size
 	    (rename (aes-descriptor     *scheme:aes*)
 		    (aes-128-descriptor *scheme:aes-128*)
 		    (aes-192-descriptor *scheme:aes-192*)
@@ -137,8 +139,8 @@
 	 (mode-key (symmetric-cipher-mode-key cipher))
 	 (padded (or (and padder (padder bv block-len)) bv))
 	 (r (symmetric-mode-descriptor:encrypt mode mode-key padded)))
-      (symmetric-mode-descriptor:done mode mode-key)
-      r))
+    (symmetric-mode-descriptor:done mode mode-key)
+    r))
 
 (define (symmetric-cipher:decrypt-bytevector cipher bv)
   (unless (symmetric-cipher? cipher)
@@ -154,8 +156,8 @@
 	 (block-len (symmetric-scheme-descriptor-block-size scheme))
 	 (mode-key (symmetric-cipher-mode-key cipher))
 	 (r (symmetric-mode-descriptor:decrypt mode mode-key bv)))
-      (symmetric-mode-descriptor:done mode mode-key)
-      (or (and unpadder (unpadder r block-len)) r)))
+    (symmetric-mode-descriptor:done mode mode-key)
+    (or (and unpadder (unpadder r block-len)) r)))
 
 (define (pkcs7-padding)
   (define (pad bv block-size)
