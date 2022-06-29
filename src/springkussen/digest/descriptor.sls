@@ -85,9 +85,12 @@
     (digest-descriptor:process! descriptor state bv start
 				(bytevector-length bv)))
    ((descriptor state bv start end)
+    (unless (bytevector? bv)
+      (springkussen-assertion-violation 'digest-descriptor:process!
+					"Input must be a bytevector" bv))
     (when (< (bytevector-length bv) (- end start))
       (springkussen-assertion-violation 'digest-descriptor:process!
-					"Invalid range"))
+					"Invalid range" start end))
     ((digest-descriptor-processor descriptor) state bv start end))))
 (define digest-descriptor:done!
   (case-lambda
@@ -99,13 +102,14 @@
 
 ;; MD4 family styled digest
 (define-record-type block-digest-state
+  (parent digest-state)
   (fields buffer
 	  state		    ;; mutable state
 	  (mutable count)   ;; buffer count
 	  (mutable length)) ;; processed length in bits
   (protocol (lambda (p)
 	      (lambda (n s)
-		(p (make-bytevector n 0) s 0 0)))))
+		((p) (make-bytevector n 0) s 0 0)))))
 
 (define (block-digest-state-count-add! digest n)
   (let ((v (+ n (block-digest-state-count digest))))
@@ -175,8 +179,19 @@
 		((= i block-w/o-len) i)
 	      (bytevector-u8-set! buffer i 0))
 	    count))
+
+      (unless (bytevector? out)
+	(springkussen-assertion-violation 'digest-done
+					  "Output must be a bytevector" out))
+      (unless (and (exact? pos) (integer? pos))
+	(springkussen-assertion-violation
+	 'digest-done "Position must be an exact integer" pos))
+      (when (< (- (bytevector-length out) pos) size)
+	(springkussen-assertion-violation 'digest-done
+					  "Output bytevector too small"))
       (when (> count (bytevector-length buffer))
 	(springkussen-assertion-violation 'digest-done "Invalid argument"))
+
       (bytevector-u8-set! buffer count #x80)
       (let* ((len   (block-digest-state-length-add! state (* count 8)))
 	     (count (check-compress buffer (+ count 1)))
