@@ -16,6 +16,9 @@ Document
 
 See [./doc/overview.md](./doc/overview.md)
 
+If you are interested in enhancing the library, please also refer the
+implementation note: [Implementation notes](./notes.md)
+
 Design
 ------
 
