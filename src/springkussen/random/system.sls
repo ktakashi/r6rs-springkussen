@@ -44,8 +44,8 @@
     (guard (e ((i/o-file-does-not-exist-error? e) #f)
 	      ;; Something else
 	      (else (raise e)))
-      (let ((in (open-file-input-port file)))
-	(get-bytevector-n! in bv s len))))
+      (call-with-port (open-file-input-port file)
+	(lambda (in) (get-bytevector-n! in bv s len)))))
   ;; let's try one by one...
   (cond ((try-read-file "/dev/urandom" bv s len))
 	((try-read-file "/dev/random" bv s len))
