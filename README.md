@@ -54,6 +54,7 @@ In this library, the following symmetric algorithms are supported
 - [x] Triple DES
 - [x] RC2
 - [x] RC5
+- [ ] ChaCha20[^1]
 
 The above ciphers are required by
 [PKCS#5](https://datatracker.ietf.org/doc/html/rfc8018), though
@@ -62,15 +63,20 @@ some of them are deprecated.
 We may support more such as `Blowfish`, however that will come
 after PKCS, especially #12, is supported.
 
+[^1]: ChaCha20 is a stream cipher. This cipher is needed for CSPRNG
+
 ### Encryption modes
 
 In this library the following encryption modes are supported.
 
 - [x] ECB
 - [x] CBC
+- [ ] Stream[^2]
 
 We may support more, such as counter mode or GCM, however,
 the same condition as encryption schemes  would be applied.
+
+[^2]: Psuedo mode for stream ciphers
 
 
 Digest algorithms
@@ -93,4 +99,13 @@ future, after PKCS is more or less supported.
 NOTE: we support the deprecated and/or vulnerable algorithms for
 backward compatibility, but users are strongly recommended **NOT**
 to use those algorithms, such as `MD5` or `SHA-1`.
+
+
+Cryptographically Secure Psuedo Random Number Generator (CSPRNG)
+----------------------------------------------------------------
+
+In this library, the following CSPRNG algorithms are supported
+
+- [x] Fortuna
+- [ ] ChaCha20
 
