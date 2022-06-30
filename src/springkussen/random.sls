@@ -36,12 +36,15 @@
 
 	    random-generator:read-random-bytes!
 	    random-generator:read-random-bytes
+
+	    random-generator:random
 	    )
     (import (rnrs)
 	    (springkussen random descriptor)
 	    (springkussen random fortuna)
 	    (springkussen random system)
-	    (springkussen conditions))
+	    (springkussen conditions)
+	    (springkussen misc bytevectors))
 
 (define-record-type random-generator
   (fields descriptor
@@ -73,5 +76,15 @@
     (random-generator:read-random-bytes! prng bv 0 len)
     bv))
 
+(define random-generator:random
+  (case-lambda
+   ((prng size) (random-generator:random prng size #f))
+   ((prng size read-size)
+    (define rsize (or read-size (ceiling (/ (bitwise-length size) 8))))
+    (let* ((bv (random-generator:read-random-bytes prng rsize))
+	   (i (bytevector->uinteger bv (endianness big))))
+      (if (>= i size)
+	  (mod i size)
+	  i)))))
 )
 

@@ -30,7 +30,8 @@
 
 #!r6rs
 (library (springkussen misc bytevectors)
-    (export bytevector-xor bytevector-xor!)
+    (export bytevector-xor bytevector-xor!
+	    bytevector->uinteger)
     (import (rnrs))
 
 (define (bytevector-xor! bv0 start0 bv1 start1 size)
@@ -44,6 +45,22 @@
 
 (define (bytevector-xor bv0 start0 bv1 start1 size)
   (bytevector-xor! (bytevector-copy bv0) start0 bv1 start1 size))
+
+(define (bytevector->uinteger bv endian)
+  (define size (bytevector-length bv))
+  (case endian
+    ((big)
+     (do ((i 0 (+ i 1)) (r 0 (bitwise-ior (bitwise-arithmetic-shift r 8)
+					  (bytevector-u8-ref bv i))))
+	 ((= i size) r)))
+    ((little)
+     (do ((i (- size 1) (- i 1))
+	  (r 0 (bitwise-ior (bitwise-arithmetic-shift r 8)
+			    (bytevector-u8-ref bv i))))
+	 ((< i 0) r)))
+    (else
+     (assertion-violation 'bytevector->uinteger "Unknown endian type" endian))))
+
 
 )
 

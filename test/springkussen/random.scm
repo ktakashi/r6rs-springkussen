@@ -19,6 +19,7 @@
   (test-assert (bytevector? (random-generator:read-random-bytes prng 5)))
   (let ((bv (random-generator:read-random-bytes prng 5)))
     (test-equal 5 (bytevector-length bv))))
-  
+
+(test-assert (< (random-generator:random default-random-generator 10) 10))
 
 (test-end)
