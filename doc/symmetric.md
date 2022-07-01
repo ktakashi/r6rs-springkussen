@@ -39,6 +39,19 @@ Below is an example to encrypt a arbitrary text with AES/CBC.
 ;; -> "Jumping on Springkussen"
 ```
 
+Cipher APIs
+-----------
+
+A cipher needs to be built via a cipher spec. A cipher spec holds
+how / what the cipher does, such ash encryption scheme, encryption
+mode, and so on.
+
+A symmetric cipher is not always a block cipher like AES. It can also be
+a stream cipher, such as ChaCha. Block cipher and stream cipher may have
+a different specification. It is users' responsibility to choose the
+right options to build a cipher.
+
+
 ###### [Procedure] `symmetric-cipher-spec?` _obj_
 
 Returns `#t` if the given _obj_ is a symmetric cipher spec object.
@@ -60,10 +73,11 @@ Returns `#t` if the given _obj_ is a symmetric cipher object.
 ###### [Procedure] `make-symmetric-cipher` _spec_ _symmetric-key_
 ###### [Procedure] `make-symmetric-cipher` _spec_ _symmetric-key_ _parameter_
 
-Makes a symmetric cipher.  
 _spec_ must be a symmetric cipher spec object.  
 _symmetric-key_ must be a symmetric key object.  
 _parameter_ must be a mode parameter, if the second form is used.
+
+Makes a symmetric cipher.
 
 NOTE: Most of the ciphers are stateful, such as CBC mode.
 
@@ -87,3 +101,139 @@ Makes a symmetric key object from the given _bv_.
 
 NOTE: This procedure does **not** check the key length, so it is users'
 responsibilty to provide a right sized bytevector.
+
+
+Encryption scheme
+-----------------
+
+Encryption scheme has a type called symmetric scheme descriptor. 
+A symmetric scheme descriptor provides a scheme name and its 
+block size if it's available.
+
+For naming convension, _ssd_ implies symmetric scheme descriptor.
+
+###### [Procedure] `symmetric-scheme-decriptor?` _obj_
+
+Returns `#t` if the given _obj_ is a symmetric scheme descriptor.
+
+###### [Procedure] `symmetric-scheme-decriptor-name` _ssd_
+
+_ssd_ must be a symmetric scheme decriptor.
+
+Returns a encryption scheme name. E.g. `AES`
+
+###### [Procedure] `symmetric-scheme-decriptor-block-size` _ssd_
+
+_ssd_ must be a symmetric scheme decriptor.
+
+Returns a block size of the encryption scheme. If the encryption
+scheme is for stream cipher, then it returns `#f`.
+
+###### [Symmetric scheme decriptor] `*scheme:aes*`
+###### [Symmetric scheme decriptor] `*scheme:aes-128*`
+###### [Symmetric scheme decriptor] `*scheme:aes-192*`
+###### [Symmetric scheme decriptor] `*scheme:aes-256*`
+
+AES encryption schemes. The first one accepts key size of 16 to 32.  
+The second one to forth one accepts specific key size of 16, 24 and 32,
+respectively.
+
+###### [Symmetric scheme decriptor] `*scheme:rc5*`
+
+RC5 encryption scheme.
+
+###### [Symmetric scheme decriptor] `*scheme:des*`
+###### [Symmetric scheme decriptor] `*scheme:desede*`
+
+DES and DESede (TripleDES) encryption scheme.
+
+###### [Symmetric scheme decriptor] `*scheme:rc2*`
+
+RC2 encryption scheme.
+
+NOTE: DES, DESede and RC2  encryption schemes are considered 
+not secure. So, do not use them for a new application.
+
+
+Encryption mode
+---------------
+
+Encryption mode has a type called symmetric mode descriptor.
+A symmetric mode decriptor provides a mode name.
+
+For naming convension, _smd_ implies symmetric scheme descriptor.
+
+###### [Procedure] `symmetric-mode-decriptor?` _obj_
+
+Returns `#t` if the given _obj_ is a symmetric mode descriptor.
+
+###### [Procedure] `symmetric-mode-decriptor-name` _smd_
+
+_smd_ must be a symmetric mode decriptor.
+
+Returns a encryption mode name. E.g. `ECB`
+
+###### [Symmetric mode decriptor] `*mode:ecb*`
+###### [Symmetric mode decriptor] `*mode:cbc*`
+
+Encryption modes. The name implies which encryption mode it is.
+
+
+### Mode parameter
+
+Encryption mode may require its parameter. For example, CBC requires
+initial vector (IV).
+
+Mode parameter has two types. One is a simple mode parameter, which
+holds only one parameter. The other one is a composite mode parameter,
+which holds multiple mode parameters. The idea is basically the
+same as R6RS's condition system. Most of the time, you don't have to
+use a simple parameter.
+
+###### [Procedure] `mode-parameter?` _obj_
+
+Returns `#t` if the given _obj_ is a mode parameter.
+
+###### [Procedure] `make-parameter` _param_ _..._
+
+Makes a composite mode parameter from given *param*s.
+
+###### [Procedure] `round-parameter?` _obj_
+
+Returns `#f` if the given _obj_ is a round mode parameter.
+
+###### [Procedure] `make-round-parameter` _i_
+
+_bv_ must be a bytevector with right size.
+
+Makes a round mode parameter.  
+A round mode parameter may be used to for key round.
+
+NOTE: This parameter is not frequently used.
+
+
+###### [Procedure] `iv-parameter?` _obj_
+
+Returns `#f` if the given _obj_ is a IV mode parameter.
+
+###### [Procedure] `make-iv-parameter` _bv_
+
+_bv_ must be a bytevector with right size.
+
+Makes a IV mode parameter.
+
+
+Padding
+-------
+
+A block cipher requires the size of plain text to be multiple of
+its block size. To make sure this happens, we can use a padding
+mechanis.
+
+A padding mechanis is a mere procedure, which returns two values,
+padder and unpadder.
+
+###### [Procedure] `pkcs7-padding`
+
+A padding mechanism conforms PKCS#7 padding.
+
