@@ -1,6 +1,27 @@
 Implementations notes
 =====================
 
+Thread safety
+-------------
+
+The library is not meant to be thread safe, however certain components,
+especially random generator, are not always explicitly passed to the
+provided procedures. And it's rather annoying to do so as well. So,
+we decided to implement some thread safety. However, mutexes are not
+supported by R6RS and not all implementations supports SRFI-18 either.
+
+To make the library works out-of-box without any modification, we
+have a mechanism to check if the implementation supports SRFI-18 or not.
+And if so, uses the procedures otherwise using dummy implementations.
+See the `(springkussen misc lock)` library:
+
+- [`src/springkussen/misc/lock.sls`](src/springkussen/misc/lock.sls)
+
+As far as I know, the current active implementations which don't support
+SRFI-18 are actually only Chez Scheme. So, we put special treatment
+for this as well.
+
+
 CSPRNG
 ------
 

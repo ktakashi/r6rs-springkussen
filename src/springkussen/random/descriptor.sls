@@ -50,7 +50,8 @@
 	    )
     (import (rnrs)
 	    (springkussen conditions)
-	    (springkussen misc record))
+	    (springkussen misc record)
+	    (springkussen misc lock))
 
 (define-record-type random-descriptor
   (fields name
@@ -67,8 +68,9 @@
   (make-record-builder random-descriptor))
 
 (define-record-type prng-state
-  (fields (mutable ready?))
-  (protocol (lambda (p) (lambda () (p #f)))))
+  (fields (mutable ready?)
+	  lock)
+  (protocol (lambda (p) (lambda () (p #f (make-lock))))))
 
 (define (check who d)
   (unless (random-descriptor? d)
@@ -85,11 +87,13 @@
     (random-descriptor:add-entropy! d st in s (bytevector-length in)))
    ((d st in s e)
     (check 'random-descriptor:add-entropy! d)
-    ((random-descriptor-entropy-updater d) st in s e))))
+    (with-lock (prng-state-lock st)
+      ((random-descriptor-entropy-updater d) st in s e)))))
     
 (define (random-descriptor:ready! d st)
   (check 'random-descriptor:ready! d)
-  ((random-descriptor-initializer d) st))
+  (with-lock (prng-state-lock st)
+    ((random-descriptor-initializer d) st)))
 
 (define random-descriptor:read!
   (case-lambda
@@ -105,11 +109,13 @@
       (when (> len (- l s))
 	(springkussen-assertion-violation 'random-descriptor:read!
 					  "Not enough space to store")))
-    ((random-descriptor-reader d) st bv s len))))
+    (with-lock (prng-state-lock st)
+      ((random-descriptor-reader d) st bv s len)))))
 
 (define (random-descriptor:done! d st)
   (check 'random-descriptor:done! d)
-  ((random-descriptor-finalizer d) st))
+  (with-lock (prng-state-lock st)
+    ((random-descriptor-finalizer d) st)))
 
 (define random-descriptor:import!
   (case-lambda
