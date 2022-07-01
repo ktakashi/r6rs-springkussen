@@ -33,11 +33,6 @@
     (export symmetric-mode-descriptor-builder
 	    symmetric-mode-descriptor?
 	    symmetric-mode-descriptor-name
-	    symmetric-mode-descriptor-starter
-	    symmetric-mode-descriptor-encryptor
-	    symmetric-mode-descriptor-decryptor
-	    symmetric-mode-descriptor-aad-updator
-	    symmetric-mode-descriptor-finalizer
 
 	    symmetric-mode-descriptor:start
 	    symmetric-mode-descriptor:encrypt

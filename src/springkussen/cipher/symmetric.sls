@@ -54,6 +54,7 @@
 
 	    ;; Mode descriptors
 	    symmetric-mode-descriptor?
+	    symmetric-mode-descriptor-name
 	    (rename (ecb-mode-descriptor *mode:ecb*)
 		    (cbc-mode-descriptor *mode:cbc*))
 
