@@ -53,15 +53,26 @@
 			;; non block size
 			#vu8(1 2 3 4 5 6 7 8 9 10)))
 ;; AES/CBC
-(let ((aes-ecb-cipher-spec (symmetric-cipher-spec-builder
+(let ((aes-cbc-cipher-spec (symmetric-cipher-spec-builder
 			    (scheme *scheme:aes*)
-			    (mode *mode:cbc*))))
-  (test-encrypt/decrypt aes-ecb-cipher-spec
-			(make-symmetric-key
-			 #vu8(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16))
+			    (mode *mode:cbc*)))
+      (key (make-symmetric-key
+	    #vu8(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16))))
+  (test-encrypt/decrypt aes-cbc-cipher-spec key
 			#vu8(1 2 3 4 5 6 7 8 9 10)
 			(make-iv-paramater
-			 #vu8(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16))))
+			 #vu8(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16)))
+  ;; parameter modification
+  (let* ((iv (make-bytevector 16 0))
+	 (param (make-iv-paramater iv))
+	 (pt #vu8(1 2 3 4 5 6 7 8 9 10)))
+    (let ((enc0 (symmetric-cipher:encrypt-bytevector
+		 (make-symmetric-cipher aes-cbc-cipher-spec key param) pt)))
+      (bytevector-u8-set! iv 0 1)
+      (let ((enc1 (symmetric-cipher:encrypt-bytevector
+		   (make-symmetric-cipher aes-cbc-cipher-spec key param) pt)))
+	(test-equal enc0 enc1))))
+  )
 
 ;; Found bug on CBC...
 (let ()
