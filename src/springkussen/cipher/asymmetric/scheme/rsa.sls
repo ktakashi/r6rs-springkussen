@@ -32,6 +32,17 @@
 (library (springkussen cipher asymmetric scheme rsa)
     (export rsa-descriptor
 
+	    *rsa-key-factory*
+	    *rsa-key-pair-factory*
+
+	    rsa-key-parameter?
+	    make-rsa-public-key-parameter rsa-public-key-parameter?
+	    make-rsa-private-key-parameter rsa-private-key-parameter?
+	    make-rsa-crt-private-key-parameter rsa-crt-private-key-parameter?
+	    make-random-generator-key-parameter random-generator-key-parameter?
+	    make-key-size-key-parameter key-size-key-parameter?
+	    make-public-exponent-key-parameter public-exponent-key-parameter?
+	    
 	    rsa-public-key-builder
 	    rsa-private-key-builder
 	    rsa-crt-private-key-builder
@@ -47,11 +58,14 @@
 	    rsa-crt-private-key-dQ rsa-crt-private-key-qP)
     (import (rnrs)
 	    (springkussen conditions)
+	    (springkussen cipher key)
 	    (springkussen cipher asymmetric key)
 	    (springkussen cipher asymmetric scheme descriptor)
 	    (springkussen math modular)
+	    (springkussen math prime)
 	    (springkussen misc bytevectors)
-	    (springkussen misc record))
+	    (springkussen misc record)
+	    (springkussen random))
 
 
 ;; This is by design, we don't want to expose direct key
@@ -88,7 +102,7 @@
 	  qP)				; (inverse of q) mod p
   (protocol (lambda (n)
 	      (lambda (m d e p q dP dQ qP)
-		((n m d) p q
+		((n m d) e p q
 		 (or dP (mod d (- p 1)))
 		 (or dQ (mod d (- q 1)))
 		 (or qP (mod-inverse q p)))))))
@@ -150,15 +164,6 @@
 		     (rsa-private-key-modulus key))))
     (div (+ (bitwise-length modulus) 7) 8)))
 
-;; minor helper
-(define-syntax align-size
-  (syntax-rules (bit)
-    ((_ (bit n))
-     (div (+ n 7) 8))
-    ((_ n)
-     (let ((bitlen (bitwise-length n)))
-       (div (+ bitlen 7) 8)))))
-
 (define rsa-descriptor
   (asymmetric-scheme-descriptor-builder
    (name "RSA")
@@ -168,5 +173,99 @@
    (decryptor rsa-decrypt)
    (finalizer rsa-finalize)))
 
+;; key generation
+(define-key-parameter <rsa-key-parameter>
+  make-rsa-key-parameter rsa-key-parameter?
+  (modulus key-parameter-modulus)
+  (exponent key-parameter-exponent)) ;; can be both public and private
+(define-key-parameter (<rsa-public-key-parameter> <rsa-key-parameter>)
+  make-rsa-public-key-parameter rsa-public-key-parameter?)
+(define-key-parameter (<rsa-private-key-parameter> <rsa-key-parameter>)
+  make-rsa-private-key-parameter rsa-private-key-parameter?)
 
+(define-key-parameter (<rsa-crt-private-key-parameter> <rsa-private-key-parameter>)
+  make-rsa-crt-private-key-parameter rsa-crt-private-key-parameter?
+  (public-exponent key-parameter-public-exponent)
+  (p key-parameter-p)
+  (q key-parameter-q)
+  (dP key-parameter-dP)
+  (dQ key-parameter-dQ)
+  (qP key-parameter-qP))
+
+(define (rsa-key-generator key-parameter)
+  (cond ((rsa-public-key-parameter? key-parameter)
+	 (rsa-public-key-builder
+	  (modulus (key-parameter-modulus key-parameter))
+	  (exponent (key-parameter-exponent key-parameter))))
+	((rsa-private-key-parameter? key-parameter)
+	 (if (rsa-crt-private-key-parameter? key-parameter)
+	     (rsa-crt-private-key-builder
+	      (modulus (key-parameter-modulus key-parameter))
+	      (private-exponent (key-parameter-exponent key-parameter))
+	      (public-exponent (key-parameter-public-exponent key-parameter))
+	      (p (key-parameter-p key-parameter))
+	      (q (key-parameter-q key-parameter))
+	      (dP (key-parameter-dP key-parameter))
+	      (dQ (key-parameter-dQ key-parameter))
+	      (qP (key-parameter-qP key-parameter)))
+	     (rsa-private-key-builder
+	      (modulus (key-parameter-modulus key-parameter))
+	      (private-exponent (key-parameter-exponent key-parameter)))))
+	(else
+	 (springkussen-assertion-violation 'rsa-key-generator
+					   "Invalid key parameter"))))
+	 
+(define *rsa-key-factory* (make-key-factory rsa-key-generator))
+
+(define-key-parameter <random-generator-key-parameter>
+  make-random-generator-key-parameter random-generator-key-parameter?
+  (random-generator key-parameter-random-generator))
+(define-key-parameter <key-size-key-parameter>
+  make-key-size-key-parameter key-size-key-parameter?
+  (key-size key-parameter-key-size))
+(define-key-parameter <public-exponent-key-parameter>
+  make-public-exponent-key-parameter public-exponent-key-parameter?
+  (public-exponent rsa-key-parameter-public-exponent))
+
+(define (rsa-key-pair-generator key-parameter)
+  (define (rsa-random-prime prng size e check)
+    (let loop ((p (random-generator:random prng (/ size 16))))
+      (if (and (or (not check) (not (= p check)))
+	       (= 1 (gcd (- p 1) e)))
+	  p
+	  (loop (random-generator:random prng (/ size 16))))))
+  (define (make-rsa-key-pair n e d p q)
+    (make-key-pair (rsa-crt-private-key-builder
+		    (modulus n)
+		    (private-exponent d)
+		    (public-exponent e)
+		    (p p)
+		    (q q))
+		   (rsa-public-key-builder
+		    (modulus n)
+		    (exponent e))))
+		    
+  (let ((prng (if (random-generator-key-parameter? key-parameter)
+		  (key-parameter-random-generator key-parameter)
+		  default-random-generator))
+	(size (if (key-size-key-parameter? key-parameter)
+		  (key-parameter-key-size key-parameter)
+		  *rsa-min-keysize*))
+	(e (if (public-exponent-key-parameter? key-parameter)
+	       (rsa-key-parameter-public-exponent key-parameter)
+	       #x10001)))
+    (when (< size *rsa-min-keysize*)
+      (springkussen-assertion-violation 'rsa-key-pair-generator
+					"Key size too small" size))
+    (unless (probable-prime? e)
+      (springkussen-assertion-violation 'rsa-key-pair-generator
+					"Exponent must be a prime number" e))
+    (let* ((p (rsa-random-prime prng size e #f))
+	   (q (rsa-random-prime prng size e p))
+	   (n (* p q))
+	   (phi (* (- p 1) (- q 1)))
+	   (d (mod-inverse e phi)))
+      (make-rsa-key-pair n e d p q))))
+      
+(define *rsa-key-pair-factory* (make-key-pair-factory rsa-key-pair-generator))
 )

@@ -82,6 +82,28 @@ the same condition as encryption schemes  would be applied.
 [^2]: Psuedo mode for stream ciphers
 
 
+Asymmetric ciphers
+------------------
+
+Asymmetric ciphers are public key ciphers. Signature algorithms are
+not included in this category. Signatures will be supported in a
+separate category. Here, asymmetric cipher can encrypt and decrypt
+given message with public key and private key, respectively.
+
+### Schemes
+
+In this library, the following asymmetric cipher algorithms are supported
+
+- [x] RSA
+
+### Encoding schemes
+
+- [x] PKCS #1 v1.5 encoding
+- [ ] PKCS #x v2 OAEP encoding
+
+NOTE: ECC is not in this category as it can't be an asymmetric cipher.
+
+
 Digest algorithms
 -----------------
 

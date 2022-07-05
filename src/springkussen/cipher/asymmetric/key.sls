@@ -35,7 +35,14 @@
 		    (private-key <private-key>))
 	    asymmetric-key?
 	    public-key?
-	    private-key?)
+	    private-key?
+
+	    key-pair-factory? (rename (key-pair-factory <key-pair-factory>))
+	    make-key-pair-factory
+	    key-pair-factory:generate-key-pair
+	    
+	    key-pair? make-key-pair
+	    key-pair-private key-pair-public)
     (import (rnrs)
 	    (springkussen cipher key))
 
@@ -47,5 +54,14 @@
 
 (define-record-type private-key 
   (parent asymmetric-key))
+
+(define-record-type key-pair
+  (fields private public))
+
+(define-record-type key-pair-factory
+  (fields key-pair-generator))
+
+(define (key-pair-factory:generate-key-pair kpf parameter)
+  ((key-pair-factory-key-pair-generator kpf) parameter))
 )
 
