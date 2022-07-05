@@ -64,7 +64,7 @@
 	  "key-parameters are required" params))
        ;; simple append-map :D
        ((p) (apply append (map (lambda (p)
-				 (if (composite-key-parameter p)
+				 (if (composite-key-parameter? p)
 				     (composite-key-parameter-parameters p)
 				     (list p))) params)))))))
 

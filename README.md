@@ -99,7 +99,7 @@ In this library, the following asymmetric cipher algorithms are supported
 ### Encoding schemes
 
 - [x] PKCS #1 v1.5 encoding
-- [ ] PKCS #x v2 OAEP encoding
+- [ ] PKCS #1 v2 OAEP encoding
 
 NOTE: ECC is not in this category as it can't be an asymmetric cipher.
 
