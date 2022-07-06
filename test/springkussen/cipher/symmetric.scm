@@ -38,8 +38,9 @@
 (test-assert "Enc mode" (symmetric-mode-descriptor? *mode:cbc*))
 
 (test-assert "Mode parameter" (mode-parameter? (make-iv-paramater #vu8())))
-(test-assert "Mode parameter"
-	     (mode-parameter? (make-mode-parameter (make-iv-paramater #vu8()))))
+(test-assert "Cipher parameter"
+	     (cipher-parameter?
+	      (make-cipher-parameter (make-iv-paramater #vu8()))))
 
 (test-assert "Symmetric key" (symmetric-key? (make-symmetric-key #vu8())))
 
@@ -82,7 +83,7 @@
      (mode   *mode:cbc*)))
 
   (define cipher-mode-parameter
-    (make-mode-parameter
+    (make-cipher-parameter
      (make-iv-paramater
       ;; IV must be the same as the block size.
       ;; NOTE: this is an example, so don't use this in production code.

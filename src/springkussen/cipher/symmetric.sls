@@ -58,9 +58,9 @@
 	    (rename (ecb-mode-descriptor *mode:ecb*)
 		    (cbc-mode-descriptor *mode:cbc*))
 
+	    make-cipher-parameter cipher-parameter?
 	    ;; Mode parameters
-	    mode-parameter?
-	    (rename (make-composite-parameter make-mode-parameter))
+	    mode-parameter? 
 	    make-iv-paramater iv-parameter?
 	    make-counter-parameter counter-parameter?
 	    make-rfc3686-parameter rfc3686-parameter?
@@ -69,6 +69,7 @@
 	    pkcs7-padding
 	    )
     (import (rnrs)
+	    (springkussen cipher parameter) ;; for convenience
 	    (springkussen cipher symmetric scheme aes)
 	    (springkussen cipher symmetric scheme des)
 	    (springkussen cipher symmetric scheme rc2)

@@ -75,7 +75,7 @@ Returns `#t` if the given _obj_ is a symmetric cipher object.
 
 _spec_ must be a symmetric cipher spec object.  
 _symmetric-key_ must be a symmetric key object.  
-_parameter_ must be a mode parameter, if the second form is used.
+_parameter_ must be a cipher parameter, if the second form is used.
 
 Makes a symmetric cipher.
 
@@ -179,24 +179,33 @@ Returns a encryption mode name. E.g. `ECB`
 Encryption modes. The name implies which encryption mode it is.
 
 
+### Cipher parameter
+
+Cipher parametetr is a compositable record, like condition on R6RS. 
+Ciphers should provide appropriate parameters and it is users
+responsibilty to choose parameters to be used.
+
+NOTE: Cipher parameter can also be used for asymmetric ciphers.
+
+###### [Procedure] `make-cipher-parameter` _param_ _..._
+
+Makes a composite cipher parameter from given *param*s.
+
+###### [Procedure] `cipher-parameter?` _obj_
+
+Returns `#t` if the given _obj_ is a cipher parameter.
+
+
 ### Mode parameter
 
 Encryption mode may require its parameter. For example, CBC requires
 initial vector (IV).
 
-Mode parameter has two types. One is a simple mode parameter, which
-holds only one parameter. The other one is a composite mode parameter,
-which holds multiple mode parameters. The idea is basically the
-same as R6RS's condition system. Most of the time, you don't have to
-use a simple parameter.
+Mode parameter is a sub type of cipher parameter.
 
 ###### [Procedure] `mode-parameter?` _obj_
 
 Returns `#t` if the given _obj_ is a mode parameter.
-
-###### [Procedure] `make-parameter` _param_ _..._
-
-Makes a composite mode parameter from given *param*s.
 
 ###### [Procedure] `round-parameter?` _obj_
 

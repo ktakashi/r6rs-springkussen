@@ -1,6 +1,6 @@
 ;;; -*- mode:scheme; coding:utf-8; -*-
 ;;;
-;;; springkussen/cipher/key.sls - Key 
+;;; springkussen/cipher/parameter.sls - Cipher parameter
 ;;;  
 ;;;   Copyright (c) 2022  Takashi Kato  <ktakashi@ymail.com>
 ;;;   
@@ -29,34 +29,13 @@
 ;;;  
 
 #!r6rs
-(library (springkussen cipher key)
-    (export (rename (key <key>))
-	    key?
-
-	    (rename (key-factory <key-factory>))
-	    key-factory? key-factory:generate-key make-key-factory
-	    
-	    key-parameter? make-key-parameter
-	    (rename (key-parameter <key-parameter>))
-	    ;; define-key-parameter
-	    make-define-key-parameter)
+(library (springkussen cipher parameter)
+    (export cipher-parameter? make-cipher-parameter
+	    (rename (cipher-parameter <cipher-parameter>))
+	    make-define-cipher-parameter)
     (import (rnrs)
-	    (springkussen conditions)
 	    (springkussen misc record))
 
-;; just an interface
-(define-record-type key)
-
-;; Probably only for asymmetric keys, but might also be for
-;; symmetric in the future, so put it here
-(define-record-type key-factory (fields key-generator))
-(define (key-factory:generate-key key-factory parameter)
-  ((key-factory-key-generator key-factory) parameter))
-
-(define-compositable-record-type key-parameter)
-
-;; TODO we will make it like this after Sagittarius 0.9.9 is released
-;; See: https://bitbucket.org/ktakashi/sagittarius-scheme/issues/285/
-;; (define-syntax define-key-parameter (make-define-key-parameter))
+(define-compositable-record-type cipher-parameter)
 )
 

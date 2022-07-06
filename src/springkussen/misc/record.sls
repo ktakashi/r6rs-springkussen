@@ -31,9 +31,119 @@
 #!r6rs
 ;; The implementation is from aeolus, which is written by me :)
 (library (springkussen misc record)
-    (export make-record-builder from)
+    (export make-record-builder from
+	    define-compositable-record-type)
     (import (rnrs)
+	    (springkussen conditions)
 	    (springkussen misc lists))
+
+(define-syntax define-compositable-record-type
+  (lambda (x)
+    (define (make-record-ctr&pred k name)
+      (define n (symbol->string (syntax->datum name)))
+      (datum->syntax k
+       (list (string->symbol (string-append "make-" n))
+	     (string->symbol (string-append n "?")))))
+    (define (make-composite-name&definer k name)
+      (define n (symbol->string (syntax->datum name)))
+      (datum->syntax k
+       (list (string->symbol (string-append "composite-" n))
+	     (string->symbol (string-append "make-define-" n )))))
+    (syntax-case x ()
+      ((k name clause ...)
+       (identifier? #'name)
+       (with-syntax (((ctr pred) (make-record-ctr&pred #'k #'name)))
+	 #'(k (name ctr pred) clause ...)))
+      ((k (name ctr pred) clause ...)
+       (with-syntax (((composite-name definer-name)
+		      (make-composite-name&definer #'k #'name)))
+       #'(begin
+	   (define-record-type (name dummy0 pred) clause ...)
+	   (define-record-type (composite-name dummy1 cpred)
+	     (parent name)
+	     (fields (immutable elements get-elements))
+	     (protocol
+	      (lambda (p)
+		(lambda params
+		  (unless (for-all pred params)
+		    (springkussen-assertion-violation 'composite-name
+		     (string-append (symbol->string 'name) " is required"
+				    params)))
+		  ((p) (apply append (map (lambda (p)
+					    (if (cpred p)
+						(get-elements p)
+						(list p))) params)))))))
+	   (define ctr dummy1)
+	   (define (find-parameter pred composite)
+	     (cond ((cpred composite)
+		    (let loop ((param (get-elements composite)))
+		      (cond ((null? param) #f)
+			    ((pred (car param)) (car param))
+			    (else (loop (cdr param))))))
+		   ((pred composite) composite)
+		   (else #f)))
+
+	   (define-syntax definer-name
+	     (lambda (xx)
+	       (syntax-case xx ()
+		 ((k) #'(k name))
+		 ((_ <parent>)
+		  #'(lambda (xxx)
+		      (syntax-case xxx ()
+			;; field
+			((k "field" name ctr pred %ctr %pred
+			    (field ((... ...) (... ...)))
+			    ((fname acc) rest ((... ...) (... ...))))
+			 #'(k "field" name ctr pred %ctr %pred
+			      (field ((... ...) (... ...))
+				     (fname real-accessor acc))
+			      (rest ((... ...) (... ...)))))
+			((k "field" name ctr pred %ctr %pred
+			    (field ((... ...) (... ...))) ())
+			 #'(k "ctr" name ctr pred %ctr %pred
+			      (field ((... ...) (... ...)))))
+			;; ctr
+			((k "ctr" name (ctr proc) pred %ctr %pred
+			    (field ((... ...) (... ...))))
+			 #'(k "parent" name ctr pred %ctr %pred (protocol proc)
+			      (field ((... ...) (... ...)))))
+			((k "ctr" name ctr pred %ctr %pred
+			    (field ((... ...) (... ...))))
+			 #'(k "parent" name ctr pred %ctr %pred  (protocol #f)
+			      (field ((... ...) (... ...)))))
+			;; parent
+			((k "parent" (name p) ctr pred %ctr %pred
+			    protocol fields)
+			 #'(k "make" name ctr pred %ctr %pred
+			      (parent p) protocol fields))
+			((k "parent" name ctr pred %ctr %pred protocol fields)
+			 #'(k "make" name ctr pred %ctr %pred
+			      (parent <parent>) protocol fields))
+			((k "make" name ctr pred %ctr %pred parent protocol
+			    ((field real acc) ((... ...) (... ...))))
+			 #'(begin
+			     (define-record-type (name ctr %pred)
+			       parent
+			       protocol
+			       (fields (immutable field real)
+				       ((... ...) (... ...))))
+			     (define (pred o)
+			       (or (%pred o)
+				   (and (cpred o)
+					(find-parameter %pred o))))
+			     (define (acc o . optional)
+			       (let ((p (find-parameter %pred o)))
+				 (cond (p (real p))
+				       ((not (null? optional)) (car optional))
+				       (else 
+					(springkussen-error 'acc
+					 "doesn't have the field")))))
+			     ((... ...) (... ...))))
+			;; entry point
+			((k name ctr pred fields ((... ...) (... ...)))
+			 #'(k "field" name ctr pred %ctr %pred ()
+			      (fields ((... ...) (... ...)))))))))))))))))
+
 
 (define-syntax from (syntax-rules ()))
 (define-syntax make-record-builder

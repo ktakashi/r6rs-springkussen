@@ -42,7 +42,10 @@
 	    key-pair-factory:generate-key-pair
 	    
 	    key-pair? make-key-pair
-	    key-pair-private key-pair-public)
+	    key-pair-private key-pair-public
+
+	    define-key-parameter
+	    )
     (import (rnrs)
 	    (springkussen cipher key))
 
@@ -63,5 +66,8 @@
 
 (define (key-pair-factory:generate-key-pair kpf parameter)
   ((key-pair-factory-key-pair-generator kpf) parameter))
+
+;; Temporary solution
+(define-syntax define-key-parameter (make-define-key-parameter))
 )
 
