@@ -34,7 +34,9 @@
 	    bytevector->integer
 	    bytevector-append
 	    hex-string->bytevector)
-    (import (rnrs))
+    (import (rnrs)
+	    ;; for bytevector-append
+	    (springkussen misc bytevectors))
 
 (define (integer->bytevector integer size)
   (let ((bv (make-bytevector size 0)))
@@ -52,14 +54,6 @@
 	      (bitwise-ior (bitwise-arithmetic-shift r 8)
 			   (bytevector-u8-ref bv i))))))
 
-(define (bytevector-append . bv*)
-  (define size
-    (fold-left (lambda (acc bv) (+ acc (bytevector-length bv))) 0 bv*))
-  (do ((r (make-bytevector size)) (bv* bv* (cdr bv*))
-       (start 0 (+ start (bytevector-length (car bv*)))))
-      ((null? bv*) r)
-    (bytevector-copy! (car bv*) 0 r start (bytevector-length (car bv*)))))
-    
 (define (hex-string->bytevector str)
   (define (safe-ref s i)
     (if (< i 0) #\0 (string-ref s i)))

@@ -62,13 +62,18 @@
 	    make-key-size-key-parameter key-size-key-parameter?
 	    make-public-exponent-key-parameter public-exponent-key-parameter?
 	    
-	    pkcs1-v1.5-encoding
+	    pkcs1-v1.5-encoding oaep-encoding
 
+	    make-cipher-parameter cipher-parameter?
 	    random-generator-encoding-parameter?
 	    make-random-generator-encoding-parameter
-	    encoding-parameter-random-generator
+	    make-digest-encoding-parameter digest-encoding-parameter?
+	    make-mgf-digest-encoding-parameter mgf-digest-encoding-parameter?
+	    make-mgf-encoding-parameter mgf-encoding-parameter?
+	    make-label-encoding-parameter label-encoding-parameter?
 	    )
     (import (rnrs)
+	    (springkussen cipher parameter) ;; for convenience
 	    (springkussen cipher asymmetric scheme rsa)
 	    (springkussen cipher asymmetric scheme descriptor)
 	    (springkussen cipher asymmetric key)

@@ -31,19 +31,29 @@
 #!r6rs
 (library (springkussen cipher asymmetric encoding)
     (export pkcs1-v1.5-encoding
-
+	    oaep-encoding
+	    
 	    encoding-parameter?
 
 	    random-generator-encoding-parameter?
 	    make-random-generator-encoding-parameter
-	    encoding-parameter-random-generator
+
+	    make-digest-encoding-parameter digest-encoding-parameter?
+	    make-mgf-digest-encoding-parameter mgf-digest-encoding-parameter?
+	    make-mgf-encoding-parameter mgf-encoding-parameter?
+	    make-label-encoding-parameter label-encoding-parameter?
+	    ;; needs signature so put it here for now
+	    ;; maybe move to (springkussen misc mgf)?
+	    mgf-1
 	    )
     (import (rnrs)
 	    (springkussen cipher asymmetric key)
 	    (springkussen cipher asymmetric scheme descriptor)
 	    (springkussen cipher parameter)
+	    (springkussen digest)
 	    (springkussen random)
 	    (springkussen conditions)
+	    (springkussen misc bytevectors)
 	    (springkussen misc record))
 
 (define-record-type encoding-parameter
@@ -56,15 +66,123 @@
   make-random-generator-encoding-parameter random-generator-encoding-parameter?
   (prng encoding-parameter-random-generator))
 
+(define-encoding-parameter <digest-encoding-parameter>
+  make-digest-encoding-parameter digest-encoding-parameter?
+  (digest encoding-parameter-digest))
+
+(define-encoding-parameter <mgf-digest-encoding-parameter>
+  make-mgf-digest-encoding-parameter mgf-digest-encoding-parameter?
+  (mgf-sha encoding-parameter-mgf-sha))
+;; I've never seen other MGF other than MGF1
+(define-encoding-parameter (<mgf-encoding-parameter> <mgf-digest-encoding-parameter>)
+  make-mgf-encoding-parameter mgf-encoding-parameter?
+  (mgf     encoding-parameter-mgf))
+
+(define-encoding-parameter <label-encoding-parameter>
+  make-label-encoding-parameter label-encoding-parameter?
+  (label  encoding-parameter-label))
+
+(define (mgf-1 mgf-seed mask-length md)
+  (when (> mask-length #x100000000) ;; 2^32
+    (springkussen-assertion-violation 'mgf-1 "Mask too long"))
+  (let* ((hash-len (digest-descriptor-digest-size md))
+	 (digester (make-digester md))
+	 (limit (+ 1 (div mask-length hash-len)))
+	 (len   (bytevector-length mgf-seed))
+	 (buf   (make-bytevector (+ len 4) 0))
+	 (T     (make-bytevector mask-length 0)))
+    (bytevector-copy! mgf-seed 0 buf 0 len)
+    (do ((counter 0 (+ counter 1)))
+	((= counter limit) T)
+      (bytevector-u32-set! buf len counter (endianness big))
+      (let ((index (* counter hash-len)))
+	(if (> (+ index hash-len) mask-length)
+	    (bytevector-copy! (digester:digest digester buf) 0 T index
+			      (- mask-length index))
+	    (bytevector-copy! (digester:digest digester buf) 0 T index
+			      hash-len))))))
+
+(define oaep-encoding
+  (case-lambda
+   ((descriptor) (oaep-encoding descriptor #f))
+   ((descriptor param)
+    ;; Default is mgf1SHA1...
+    ;; https://datatracker.ietf.org/doc/html/rfc8017#appendix-A.2.1
+    (define md (encoding-parameter-digest param *digest:sha1*))
+    (define hlen (digest-descriptor-digest-size md))
+    (define mgf (or (encoding-parameter-mgf param mgf-1) mgf-1))
+    (define mgf-sha (encoding-parameter-mgf-sha param *digest:sha1*))
+    (define label (encoding-parameter-label param #vu8()))
+    (define digester (make-digester md))
+    (define lhash (digester:digest digester label))
+    (define prng
+      (encoding-parameter-random-generator param default-random-generator))
+    
+    (define (encode data state)
+      (define k
+	(asymmetric-scheme-descriptor:get-block-size descriptor state))
+      (define ps-len (- k (bytevector-length data) (* hlen 2) 2))
+
+      (when (> (bytevector-length data) (- k 2 (* hlen 2)))
+	(springkussen-assertion-violation 'oaep-encoding
+					  "Too much data for OAEP encoding"))
+      (let* ((ps (make-bytevector ps-len 0))
+	     (db (bytevector-append lhash ps #vu8(#x01) data))
+	     (seed (random-generator:read-random-bytes prng hlen))
+	     (db-mask (mgf seed (- k hlen 1) mgf-sha))
+	     (masked-db (bytevector-xor! db 0 db-mask 0 (bytevector-length db)))
+	     (seed-mask (mgf masked-db hlen mgf-sha))
+	     (masked-seed (bytevector-xor! seed 0 seed-mask 0 hlen)))
+	(bytevector-append #vu8(#x00) masked-seed masked-db)))
+
+    (define (decode data state)
+      (define k
+	(asymmetric-scheme-descriptor:get-block-size descriptor state))
+      (define db-len (- k hlen 1))
+      (define (parse-em data)
+	(let ((ms (make-bytevector hlen))
+	      (db (make-bytevector db-len)))
+	  (bytevector-copy! data 1 ms 0 hlen)
+	  (bytevector-copy! data (+ hlen 1) db 0 db-len)
+	  (values (bytevector-u8-ref data 0) ms db)))
+      (define (parse-db db)
+	(define (find-ps-end db)
+	  (do ((i hlen (+ i 1)))
+	      ((= (bytevector-u8-ref db i) #x01) i)))
+	(let* ((ps-end (find-ps-end db))
+	       (Y (make-bytevector hlen))
+	       (ps-len (- ps-end hlen))
+	       (ps (make-bytevector ps-len))
+	       (M (make-bytevector (- db-len hlen ps-len 1))))
+	  (bytevector-copy! db 0 Y 0 hlen)
+	  (bytevector-copy! db hlen ps 0 ps-len)
+	  (bytevector-copy! db (+ hlen ps-len 1) M 0 (bytevector-length M))
+	  (values Y ps (bytevector-u8-ref db ps-end) M)))
+
+      (when (> (bytevector-length data) k)
+	(springkussen-assertion-violation 'oaep-decoding
+					  "Too much data for OAEP encoding"))
+      (let-values (((Y masked-seed masked-db) (parse-em data)))
+	(let* ((seed-mask (mgf masked-db hlen mgf-sha))
+	       (seed (bytevector-xor! masked-seed 0 seed-mask 0
+				      (bytevector-length masked-seed)))
+	       (db-mask (mgf seed db-len mgf-sha))
+	       (db (bytevector-xor! masked-db 0 db-mask 0
+				    (bytevector-length masked-db))))
+	  (let-values (((lhash-dash ps one M) (parse-db db)))
+	    (unless (and (bytevector-safe=? lhash lhash-dash)
+			 (zero? Y)
+			 (= one #x01))
+	      (springkussen-error 'oaep-decoding "Invalid OAEP encoding"))
+	    M))))
+    (values encode decode))))
+
 (define pkcs1-v1.5-encoding
   (case-lambda
    ((descriptor) (pkcs1-v1.5-encoding descriptor #f))
    ((descriptor param)
     (define prng
-      (or (and param
-	       (encoding-parameter-random-generator param
-						    default-random-generator))
-	  default-random-generator))
+      (encoding-parameter-random-generator param default-random-generator))
     ;; Encode with
     ;;  - private key = signature  = EMSA-PKCS1-v1.5
     ;;  - public key  = encryption = RSAES-PKCS1-v1_5

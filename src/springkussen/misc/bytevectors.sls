@@ -30,10 +30,20 @@
 
 #!r6rs
 (library (springkussen misc bytevectors)
-    (export bytevector-xor bytevector-xor!
-	    bytevector->uinteger uinteger->bytevector)
+    (export bytevector-append bytevector-xor bytevector-xor!
+	    bytevector->uinteger uinteger->bytevector
+	    bytevector-safe=?)
     (import (rnrs))
 
+(define (bytevector-append . bv*)
+  (define size
+    (fold-left (lambda (acc bv) (+ acc (bytevector-length bv))) 0 bv*))
+  (do ((r (make-bytevector size)) (bv* bv* (cdr bv*))
+       (start 0 (+ start (bytevector-length (car bv*)))))
+      ((null? bv*) r)
+    (bytevector-copy! (car bv*) 0 r start (bytevector-length (car bv*)))))
+
+  
 (define (bytevector-xor! bv0 start0 bv1 start1 size)
   (do ((i 0 (+ i 1)))
       ((= i size) bv0)
@@ -78,5 +88,20 @@
 		     (else (assertion-violation 'uinteger->bytevector
 						"Unknown endian" endian)))))
 	  (bytevector-u8-set! bv pos n)))))))
+
+(define (bytevector-safe=? bv1 bv2)
+  (define l1 (bytevector-length bv1))
+  (define l2 (bytevector-length bv2))
+  (let loop ((i 0) (j 0) (ok? #t))
+    (cond ((and (= i l1) (= j l2)) ok?)
+	  ((and (< i l1) (< j l2))
+	   (loop (+ i 1) (+ j 1)
+		 (and ok? (= (bytevector-u8-ref bv1 i)
+			     (bytevector-u8-ref bv2 j)))))
+	  ((= i l1) (loop i (+ j 1) #f))
+	  ((= j l2) (loop (+ i 1) j #f))
+	  ;; This should never happen
+	  (else #f))))
+
 )
 
