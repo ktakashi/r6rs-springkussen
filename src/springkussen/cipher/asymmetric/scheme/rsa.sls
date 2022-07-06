@@ -245,15 +245,10 @@
 		    (modulus n)
 		    (exponent e))))
 		    
-  (let ((prng (if (random-generator-key-parameter? key-parameter)
-		  (key-parameter-random-generator key-parameter)
-		  default-random-generator))
-	(size (if (key-size-key-parameter? key-parameter)
-		  (key-parameter-key-size key-parameter)
-		  *rsa-min-keysize*))
-	(e (if (public-exponent-key-parameter? key-parameter)
-	       (rsa-key-parameter-public-exponent key-parameter)
-	       #x10001)))
+  (let ((prng (key-parameter-random-generator key-parameter
+					      default-random-generator))
+	(size (key-parameter-key-size key-parameter *rsa-min-keysize*))
+	(e (rsa-key-parameter-public-exponent key-parameter #x10001)))
     (when (< size *rsa-min-keysize*)
       (springkussen-assertion-violation 'rsa-key-pair-generator
 					"Key size too small" size))

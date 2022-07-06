@@ -31,19 +31,40 @@
 #!r6rs
 (library (springkussen cipher asymmetric encoding)
     (export pkcs1-v1.5-encoding
+
+	    encoding-parameter?
+
+	    random-generator-encoding-parameter?
+	    make-random-generator-encoding-parameter
+	    encoding-parameter-random-generator
 	    )
     (import (rnrs)
 	    (springkussen cipher asymmetric key)
 	    (springkussen cipher asymmetric scheme descriptor)
+	    (springkussen cipher parameter)
 	    (springkussen random)
 	    (springkussen conditions)
 	    (springkussen misc record))
 
+(define-record-type encoding-parameter
+  (parent <cipher-parameter>))
+
+(define-syntax define-encoding-parameter
+  (make-define-cipher-parameter encoding-parameter))
+
+(define-encoding-parameter <random-generator-encoding-parameter>
+  make-random-generator-encoding-parameter random-generator-encoding-parameter?
+  (prng encoding-parameter-random-generator))
 
 (define pkcs1-v1.5-encoding
   (case-lambda
-   ((descriptor) (pkcs1-v1.5-encoding descriptor default-random-generator))
-   ((descriptor prng)
+   ((descriptor) (pkcs1-v1.5-encoding descriptor #f))
+   ((descriptor param)
+    (define prng
+      (or (and param
+	       (encoding-parameter-random-generator param
+						    default-random-generator))
+	  default-random-generator))
     ;; Encode with
     ;;  - private key = signature  = EMSA-PKCS1-v1.5
     ;;  - public key  = encryption = RSAES-PKCS1-v1_5

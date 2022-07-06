@@ -63,6 +63,10 @@
 	    make-public-exponent-key-parameter public-exponent-key-parameter?
 	    
 	    pkcs1-v1.5-encoding
+
+	    random-generator-encoding-parameter?
+	    make-random-generator-encoding-parameter
+	    encoding-parameter-random-generator
 	    )
     (import (rnrs)
 	    (springkussen cipher asymmetric scheme rsa)
@@ -112,8 +116,7 @@
 		       scheme asymmetric-key param)))
       (let-values (((encoder decoder)
 		    ((asymmetric-cipher-spec-encoding cipher-spec)
-		     ;; TODO get prng from the parameter
-		     scheme)))
+		     scheme param)))
 	(%make cipher-spec state-key encoder decoder))))))
 
 (define (asymmetric-cipher:encrypt-bytevector cipher bv)

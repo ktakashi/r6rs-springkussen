@@ -11,13 +11,15 @@
 (test-assert (key-factory? *key-factory:rsa*))
 
 (test-assert (key-pair-factory? *key-pair-factory:rsa*))
-(let ((kp (key-pair-factory:generate-key-pair *key-pair-factory:rsa*
-	   (make-key-size-key-parameter 1024))))
-  (test-assert (key-pair? kp))
-  (test-assert (asymmetric-key? (key-pair-private kp)))
-  (test-assert (private-key? (key-pair-private kp)))
-  (test-assert (asymmetric-key? (key-pair-public kp)))
-  (test-assert (public-key? (key-pair-public kp))))
+(define (key-pair-test factory param)
+  (let ((kp (key-pair-factory:generate-key-pair factory param)))
+    (test-assert (key-pair? kp))
+    (test-assert (asymmetric-key? (key-pair-private kp)))
+    (test-assert (private-key? (key-pair-private kp)))
+    (test-assert (asymmetric-key? (key-pair-public kp)))
+    (test-assert (public-key? (key-pair-public kp)))))
+(key-pair-test *key-pair-factory:rsa* (make-key-size-key-parameter 1024))
+(key-pair-test *key-pair-factory:rsa* #f)
 
 (define (test-asymmetric-ciper pt ct spec pub-key priv-key)
   (define (encrypt pt)
