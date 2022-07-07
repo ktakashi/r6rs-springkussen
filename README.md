@@ -134,3 +134,11 @@ In this library, the following CSPRNG algorithms are supported
 - [x] Fortuna
 - [ ] ChaCha20
 
+MAC
+---
+
+In this library, the following MAC algorithms are supported
+
+- [x] HMAC
+
+We may support more algorithms, such as CMAC, but comes later
