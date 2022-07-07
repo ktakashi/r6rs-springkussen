@@ -35,6 +35,7 @@
 	    
 	    mac-descriptor:init
 	    mac-descriptor:mac-size
+	    mac-descriptor:mac-oid
 	    mac-descriptor:process!
 	    mac-descriptor:done!
 
@@ -47,6 +48,7 @@
 (define-record-type mac-descriptor
   (fields name
 	  mac-sizer
+	  oid-retriever
 	  starter
 	  processor
 	  finalizer))
@@ -58,8 +60,11 @@
 (define (mac-descriptor:init descriptor param)
   ((mac-descriptor-starter descriptor) param))
 
-(define (mac-descriptor:mac-size descriptor state)
-  ((mac-descriptor-mac-sizer descriptor) state))
+(define (mac-descriptor:mac-size descriptor state/param)
+  ((mac-descriptor-mac-sizer descriptor) state/param))
+
+(define (mac-descriptor:mac-oid descriptor state/param)
+  ((mac-descriptor-oid-retriever descriptor) state/param))
 
 (define mac-descriptor:process!
   (case-lambda

@@ -38,14 +38,14 @@
 	    mac:process!
 	    mac:done!
 	    mac:mac-size
+	    mac:mac-oid
 	    
 	    mac-descriptor?
 	    mac-descriptor-name
 	    (rename (hmac-descriptor *mac:hmac*))
 
 	    mac-parameter? make-mac-parameter
-	    make-digest-mac-parameter digest-mac-parameter?
-	    make-key-mac-parameter key-mac-parameter?
+	    make-hmac-parameter hmac-parameter?
 	    )
     (import (rnrs)
 	    (springkussen conditions)
@@ -70,11 +70,9 @@
   (case-lambda
    ((mac bv) (mac:generate-mac mac bv #f))
    ((mac bv len)
-    (mac:init! mac)
-    (mac:process! mac bv)
     (let ((out (or (and (integer? len) (make-bytevector len))
 		   (make-bytevector (mac:mac-size mac)))))
-      (mac:done! mac out)))))
+      (mac:generate-mac! mac bv out)))))
   
 (define mac:generate-mac!
   (case-lambda
@@ -124,12 +122,13 @@
 (define (mac:mac-size mac)
   (unless (mac? mac)
     (springkussen-assertion-violation 'mac:mac-size "MAC required" mac))
-  ;; it's a bit weird, we might want to change
-  (let ((state (mac-state mac))
-	(descriptor (mac-descriptor mac)))
-    (unless state
-      (springkussen-assertion-violation 'mac:mac-size
-					"MAC is not initialized yet"))
-    (mac-descriptor:mac-size descriptor state)))
+  (let ((descriptor (mac-descriptor mac)))
+    (mac-descriptor:mac-size descriptor (mac-parameter mac))))
+
+(define (mac:mac-oid mac)
+  (unless (mac? mac)
+    (springkussen-assertion-violation 'mac:oid "MAC required" mac))
+  (let ((descriptor (mac-descriptor mac)))
+    (mac-descriptor:mac-oid descriptor (mac-parameter mac))))
   
 )

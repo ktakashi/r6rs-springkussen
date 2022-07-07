@@ -12,16 +12,33 @@
   (define (test-it digest&mac)
     (let ((digest (car digest&mac))
 	  (expected (cdr digest&mac)))
-      (let ((mac (make-mac *mac:hmac*
-			   (make-mac-parameter
-			    (make-digest-mac-parameter digest)
-			    (make-key-mac-parameter key)))))
+      (let ((mac (make-mac *mac:hmac* (make-hmac-parameter key digest))))
 	(test-equal expected (mac:generate-mac mac data
 					       (bytevector-length expected)))
 	(let ((out (make-bytevector (bytevector-length expected))))
 	  (test-equal expected (mac:generate-mac! mac data out))))))
   
   (for-each test-it digest&mac))
+
+(define (test-hmac-oid md&oid)
+  (let ((md (car md&oid))
+	(oid (cdr md&oid)))
+    (test-equal oid (mac:mac-oid
+		     (make-mac *mac:hmac* (make-hmac-parameter #vu8() md))))))
+
+(for-each test-hmac-oid
+	  `(
+	    (,*digest:md5*    . "1.3.6.1.5.5.8.1.1")   ;; hmac-md5
+	    (,*digest:sha1*   . "1.2.840.113549.2.7")  ;; hmac-sha1
+	    (,*digest:sha224* . "1.2.840.113549.2.8")  ;; hmac-sha224
+	    (,*digest:sha256* . "1.2.840.113549.2.9")  ;; hmac-sha256
+	    (,*digest:sha384* . "1.2.840.113549.2.10") ;; hmac-sha384
+	    (,*digest:sha512* . "1.2.840.113549.2.11") ;; hmac-sha512
+	    ))
+
+(test-equal 20
+	    (mac:mac-size
+	     (make-mac *mac:hmac* (make-hmac-parameter #vu8() *digest:sha1*))))
 
 (test-hmac (hex-string->bytevector "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b")
 	   (hex-string->bytevector "4869205468657265")
