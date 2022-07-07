@@ -1,6 +1,5 @@
 #!r6rs
 (import (rnrs)
-	(springkussen cipher key)
 	(springkussen cipher asymmetric)
 	(springkussen digest)
 	(springkussen conditions)

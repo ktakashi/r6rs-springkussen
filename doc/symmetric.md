@@ -3,7 +3,7 @@
 
 This library provides symmetric key ciphers and its APIs.
 
-Below is an example to encrypt a arbitrary text with AES/CBC.
+Below is an example to encrypt an arbitrary text with AES/CBC.
 
 ```scheme
 (import (rnrs)

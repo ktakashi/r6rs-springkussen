@@ -38,11 +38,18 @@
 	    asymmetric-cipher:decrypt-bytevector
 	    
 	    asymmetric-key?
+
+	    asymmetric-key:import-key
+	    asymmetric-key:export-key
 	    
 	    ;; Scheme descriptors
 	    asymmetric-scheme-descriptor?
 	    asymmetric-scheme-descriptor-name
 
+	    ;; for convenience
+	    key-factory?
+	    key-factory:generate-key
+	    
 	    key-pair-factory?
 	    key-pair-factory:generate-key-pair
 
@@ -54,7 +61,7 @@
 	    ;; key factories
 	    (rename (*rsa-key-factory* *key-factory:rsa*)
 		    (*rsa-key-pair-factory* *key-pair-factory:rsa*))
-	    rsa-key-parameter?
+	    key-parameter?
 	    make-rsa-public-key-parameter rsa-public-key-parameter?
 	    make-rsa-private-key-parameter rsa-private-key-parameter?
 	    make-rsa-crt-private-key-parameter rsa-crt-private-key-parameter?
@@ -78,6 +85,7 @@
 	    (springkussen cipher asymmetric scheme descriptor)
 	    (springkussen cipher asymmetric key)
 	    (springkussen cipher asymmetric encoding)
+	    (springkussen cipher key) ;; for convenience
 	    (springkussen conditions)
 	    (springkussen misc record))
 

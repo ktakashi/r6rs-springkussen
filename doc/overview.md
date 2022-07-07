@@ -17,6 +17,7 @@ Below is the list of libraries:
 
 - [`(springkussen conditions)`](./conditions.md): Defines base conditions
 - [`(springkussen cipher symmetric)`](./symmetric.md): Symmetric cipher APIs
+- [`(springkussen cipher asymmetric)`](./asymmetric.md): Asymmetric cipher APIs
 - [`(springkussen digest)`](./digest.md): Digest APIs
 - [`(springkussen random)`](./random.md): Secure random generator APIs
 

@@ -34,6 +34,12 @@
 		    (public-key <public-key>)
 		    (private-key <private-key>))
 	    asymmetric-key?
+
+	    asymmetric-key-operation?
+	    (rename (asymmetric-key-operation <asymmetric-key-operation>))
+	    asymmetric-key:import-key
+	    asymmetric-key:export-key
+	    
 	    public-key?
 	    private-key?
 
@@ -63,6 +69,16 @@
 
 (define-record-type key-pair-factory
   (fields key-pair-generator))
+
+(define-record-type asymmetric-key-operation
+  (fields importer
+	  exporter))
+
+(define (asymmetric-key:import-key operation bv)
+  ((asymmetric-key-operation-importer operation) bv))
+
+(define (asymmetric-key:export-key operation key)
+  ((asymmetric-key-operation-exporter operation) key))
 
 (define (key-pair-factory:generate-key-pair kpf parameter)
   ((key-pair-factory-key-pair-generator kpf) parameter))
