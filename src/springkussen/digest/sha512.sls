@@ -194,6 +194,7 @@
   (digest-descriptor-builder
    (name "SHA-512")
    (digest-size 64)
+   (block-size 128)
    (oid "2.16.840.1.101.3.4.2.3")
    (initializer make-sha512)
    (processor sha512-process)
@@ -206,6 +207,7 @@
   (digest-descriptor-builder
    (name "SHA-384")
    (digest-size 48)
+   (block-size 128)
    (oid "2.16.840.1.101.3.4.2.2")
    (initializer make-sha384)
    (processor sha512-process)
@@ -225,6 +227,7 @@
   (digest-descriptor-builder
    (name "SHA-512/224")
    (digest-size 28)
+   (block-size 128)
    (oid "2.16.840.1.101.3.4.2.5")
    (initializer make-sha512/224)
    (processor sha512-process)
@@ -236,6 +239,7 @@
   (digest-descriptor-builder
    (name "SHA-512/256")
    (digest-size 32)
+   (block-size 128)
    (oid "2.16.840.1.101.3.4.2.6")
    (initializer make-sha512/256)
    (processor sha512-process)

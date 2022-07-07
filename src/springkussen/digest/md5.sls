@@ -130,6 +130,7 @@
   (digest-descriptor-builder
    (name "MD5")
    (digest-size 16)
+   (block-size 64)
    (oid "1.2.840.113549.2.5")
    (initializer make-md5)
    (processor md5-process)

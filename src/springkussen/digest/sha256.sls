@@ -143,6 +143,7 @@
   (digest-descriptor-builder
    (name "SHA-256")
    (digest-size 32)
+   (block-size 64)
    (oid "2.16.840.1.101.3.4.2.1")
    (initializer make-sha256)
    (processor sha256-process)
@@ -155,6 +156,7 @@
   (digest-descriptor-builder
    (name "SHA-224")
    (digest-size 28)
+   (block-size 64)
    (oid "2.16.840.1.101.3.4.2.4")
    (initializer make-sha224)
    (processor sha256-process)

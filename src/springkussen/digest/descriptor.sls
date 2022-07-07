@@ -34,6 +34,7 @@
 	    digest-descriptor-builder
 	    digest-descriptor-name
 	    digest-descriptor-digest-size
+	    digest-descriptor-block-size
 	    digest-descriptor-oid
 
 	    digest-descriptor:digest ;; High level
@@ -61,6 +62,7 @@
 (define-record-type digest-descriptor
   (fields name
 	  digest-size		   ; Digest size in octets
+	  block-size		   ; Block size if available
 	  oid			   ; Digest OID (#f if not registered)
 	  initializer
 	  processor

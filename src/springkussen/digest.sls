@@ -40,6 +40,7 @@
 	    digest-descriptor?
 	    digest-descriptor-name
 	    digest-descriptor-digest-size
+	    digest-descriptor-block-size
 	    digest-descriptor-oid
 	    (rename (md5-descriptor        *digest:md5*)
 		    (sha1-descriptor       *digest:sha1*)

@@ -109,6 +109,7 @@
   (digest-descriptor-builder
    (name "SHA-1")
    (digest-size 20)
+   (block-size 64)
    (oid "1.3.14.3.2.26")
    (initializer make-sha1)
    (processor sha1-process)
