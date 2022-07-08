@@ -14,9 +14,7 @@
     (let ((digest (car digest&mac))
 	  (expected (cdr digest&mac)))
       (let ((state (mac-descriptor:init hmac-descriptor
-					(make-mac-parameter
-					 (make-digest-mac-parameter digest)
-					 (make-key-mac-parameter key)))))
+					(make-hmac-parameter key digest))))
 	(mac-descriptor:process! hmac-descriptor state data)
 	(let ((bv (make-bytevector
 		   (min (mac-descriptor:mac-size hmac-descriptor state)
