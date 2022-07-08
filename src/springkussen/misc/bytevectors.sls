@@ -32,6 +32,7 @@
 (library (springkussen misc bytevectors)
     (export bytevector-append bytevector-xor bytevector-xor!
 	    bytevector->uinteger uinteger->bytevector
+	    bytevector->sinteger sinteger->bytevector
 	    bytevector-safe=?)
     (import (rnrs))
 
@@ -76,7 +77,7 @@
    ((ui endian)
     (let* ((bitlen (bitwise-length ui))
 	   (len (+ (div bitlen 8) (if (zero? (bitwise-and bitlen 7)) 0 1))))
-      (uinteger->bytevector ui endian(if (zero? len) 1 len))))
+      (uinteger->bytevector ui endian (if (zero? len) 1 len))))
    ((ui endian size)
     (let ((bv (make-bytevector size)))
       (do ((i 0 (+ i 1)))
@@ -86,6 +87,48 @@
 		     ((big) (- size i 1))
 		     ((little) i)
 		     (else (assertion-violation 'uinteger->bytevector
+						"Unknown endian" endian)))))
+	  (bytevector-u8-set! bv pos n)))))))
+
+(define (bytevector->sinteger bv endian)
+  (define size (bytevector-length bv))
+  (if (zero? (bytevector-length bv))
+      0
+      (case endian
+	((big)
+	 (if (> (bytevector-u8-ref bv 0) #x7F)
+	     (- (bytevector->uinteger bv endian) (expt 256 size))
+	     (bytevector->uinteger bv endian)))
+	((little)
+	 (if (> (bytevector-u8-ref bv (- size 1)) #x7F)
+	     (- (bytevector->uinteger bv endian) (expt 256 size))
+	     (bytevector->uinteger bv endian)))
+	(else
+	 (assertion-violation
+	  'bytevector->sinteger "Unknown endian type" endian)))))
+
+(define sinteger->bytevector
+  (case-lambda
+   ((si endian)
+    (let* ((bitlen (bitwise-length si))
+	   (len (+ (div bitlen 8) (if (zero? (bitwise-and bitlen 7)) 0 1)))
+	   (left (bitwise-and
+		  (bitwise-arithmetic-shift-right si
+		   (- (bitwise-and (+ bitlen 7) (bitwise-not 7)) 8))
+		  #xFF)))
+      (sinteger->bytevector si endian
+			    (if (negative? si)
+				(+ len (if (<= left #x7F) 1 0))
+				(+ len (if (> left #x7F) 1 0))))))
+   ((si endian size)
+    (let ((bv (make-bytevector size (if (negative? si) #xFF 0))))
+      (do ((i 0 (+ i 1)))
+	  ((= i size) bv)
+	(let ((n (bitwise-and (bitwise-arithmetic-shift si (* i -8)) #xFF))
+	      (pos (case endian
+		     ((big) (- size i 1))
+		     ((little) i)
+		     (else (assertion-violation 'sinteger->bytevector
 						"Unknown endian" endian)))))
 	  (bytevector-u8-set! bv pos n)))))))
 
