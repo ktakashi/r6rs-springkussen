@@ -1,0 +1,169 @@
+;;; -*- mode:scheme; coding:utf-8; -*-
+;;;
+;;; springkussen/asn1/types.sls - ASN.1 DER/BER types
+;;;
+;;;   Copyright (c) 2022  Takashi Kato  <ktakashi@ymail.com>
+;;;
+;;;   Redistribution and use in source and binary forms, with or without
+;;;   modification, are permitted provided that the following conditions
+;;;   are met:
+;;;
+;;;   1. Redistributions of source code must retain the above copyright
+;;;      notice, this list of conditions and the following disclaimer.
+;;;
+;;;   2. Redistributions in binary form must reproduce the above copyright
+;;;      notice, this list of conditions and the following disclaimer in the
+;;;      documentation and/or other materials provided with the distribution.
+;;;
+;;;   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+;;;   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+;;;   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+;;;   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+;;;   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+;;;   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+;;;   TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+;;;   PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+;;;   LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+;;;   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+;;;   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+;;;
+
+#!r6rs
+(library (springkussen asn1 types)
+    (export asn1-object?
+	    asn1-encodable-object?
+	    (rename (asn1-encodable-object <asn1-encodable-object>))
+	    asn1-encodable-object-writer
+
+	    asn1-simple-object? asn1-simple-object-value
+	    
+	    BOOLEAN
+	    der-boolean? make-der-boolean
+	    (rename (asn1-simple-object-value der-boolean-value))
+	    
+	    INTEGER
+	    der-integer? make-der-integer
+	    (rename (asn1-simple-object-value der-integer-value))
+	    
+	    BIT-STRING
+	    OCTET-STRING
+	    NULL
+	    OBJECT-IDENTIFIER
+	    EXTERNAL
+	    ENUMERATED
+	    SEQUENCE
+	    SEQUENCE-OF
+	    asn1-collection? asn1-collection-elements
+	    der-sequence? make-der-sequence
+	    (rename (asn1-collection-elements der-sequence-elements))
+	    
+	    SET
+	    SET-OF
+	    der-set? make-der-set
+	    (rename (asn1-collection-elements der-set-elements))
+	    
+	    NUMERIC-STRING
+	    PRINTABLE-STRING
+	    T61-STRING
+	    VIDEOTEX-STRING
+	    IA5-STRING
+	    UTC-TIME
+	    GENERALIZED-TIME
+	    GRAPHIC-STRING
+	    VISIBLE-STRING
+	    GENERAL-STRING
+	    UNIVERSAL-STRING
+	    BMP-STRING
+	    UTF8-STRING
+
+	    CONSTRUCTED
+
+	    APPLICATION
+	    der-application-specific? make-der-application-specific
+	    der-application-specific-constructed?
+	    der-application-specific-tag
+	    der-application-specific-octets
+
+	    TAGGED
+	    der-tagged-object? make-der-tagged-object
+	    der-tagged-object-tag-no
+	    der-tagged-object-explicit? der-tagged-object-obj
+
+	    )
+    (import (rnrs)
+	    (springkussen conditions))
+
+(define BOOLEAN			#x01)
+(define INTEGER			#x02)
+(define BIT-STRING		#x03)
+(define OCTET-STRING		#x04)
+(define NULL			#x05)
+(define OBJECT-IDENTIFIER	#x06)
+(define EXTERNAL		#x08)
+(define ENUMERATED		#x0a)
+(define SEQUENCE		#x10)	;
+(define SEQUENCE-OF		#x10)	; for completeness
+(define SET			#x11)	;
+(define SET-OF			#x11)	; for completeness
+
+(define NUMERIC-STRING		#x12)
+(define PRINTABLE-STRING	#x13)
+(define T61-STRING		#x14)
+(define VIDEOTEX-STRING		#x15)
+(define IA5-STRING		#x16)
+(define UTC-TIME		#x17)
+(define GENERALIZED-TIME	#x18)
+(define GRAPHIC-STRING		#x19)
+(define VISIBLE-STRING		#x1a)
+(define GENERAL-STRING		#x1b)
+(define UNIVERSAL-STRING	#x1c)
+(define BMP-STRING		#x1e)
+(define UTF8-STRING		#x0c)
+
+(define CONSTRUCTED		#x20)	;
+(define APPLICATION		#x40)	;
+(define TAGGED			#x80)	;
+
+;; Abstract record type
+(define-record-type asn1-object)
+(define-record-type asn1-encodable-object
+  (parent asn1-object)
+  (fields writer))
+
+;; Simple value
+(define-record-type asn1-simple-object
+  (parent asn1-object)
+  (fields value))
+
+;; Boolean
+(define-record-type der-boolean
+  (parent asn1-simple-object))
+
+;; Integer
+(define-record-type der-integer
+  (parent asn1-simple-object))
+
+;; Collection
+(define-record-type asn1-collection
+  (parent asn1-object)
+  (fields (mutable elements)))
+
+;; Sequence
+(define-record-type der-sequence
+  (parent asn1-collection))
+
+;; Set
+(define-record-type der-set
+  (parent asn1-collection))
+
+;; Application specific
+(define-record-type der-application-specific
+  (parent asn1-object)
+  (fields constructed? tag octets))
+
+;; Tagged object
+(define-record-type der-tagged-object
+  (parent asn1-object)
+  (fields tag-no explicit? obj))
+
+)
