@@ -28,7 +28,7 @@
 ;;;   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;  
 
-;; TLV is not ANS.1 specific though there's not much proper location
+;; TLV is not ASN.1 specific though there's not much proper location
 ;; to put, and this is the only one using this. So let's put it here.
 #!r6rs
 (library (springkussen asn1 tlv)
