@@ -29,6 +29,12 @@
 (test-asn1-writer #vu8(1 1 #xFF) (make-der-boolean #t))
 (test-asn1-writer #vu8(1 1 #x0) (make-der-boolean #f))
 
+;; Integer
+(test-asn1-writer #vu8(2 2 0 #xFF) (make-der-integer #xFF))
+(test-asn1-writer #vu8(2 1 #x0) (make-der-integer 0))
+(test-asn1-writer #vu8(2 2 #xFF 1) (make-der-integer #x-FF))
+
+
 ;; sequence
 (test-asn1-writer #vu8(48 0) (make-der-sequence '()))
 (test-asn1-writer #vu8(48 3 32 1 0) (make-der-sequence (list (make-non-empty))))

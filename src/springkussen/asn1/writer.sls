@@ -35,7 +35,8 @@
 	    )
     (import (rnrs)
 	    (springkussen asn1 types)
-	    (springkussen conditions))
+	    (springkussen conditions)
+	    (springkussen misc bytevectors))
 
 (define write-asn1-object
   (case-lambda
@@ -43,6 +44,8 @@
    ((asn1-object output)
     (cond ((der-boolean? asn1-object)
 	   (write-der-boolean asn1-object output))
+	  ((der-integer? asn1-object)
+	   (write-der-integer asn1-object output))
 	  ((der-sequence? asn1-object)
 	   (write-der-sequence asn1-object output))
 	  ((der-set? asn1-object)
@@ -67,6 +70,13 @@
   (write-der-encoded BOOLEAN
 		     (make-bytevector 1 (if (der-boolean-value db) #xFF 0))
 		     output))
+
+;; Integer
+(define (write-der-integer di output)
+  (let ((v (der-integer-value di)))
+    (write-der-encoded INTEGER
+		       (sinteger->bytevector v (endianness big))
+		       output)))
 
 ;; Application specific
 (define (write-der-application-specific dap output)

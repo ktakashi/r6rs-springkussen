@@ -116,10 +116,10 @@
 		  (bitwise-arithmetic-shift-right si
 		   (- (bitwise-and (+ bitlen 7) (bitwise-not 7)) 8))
 		  #xFF)))
-      (sinteger->bytevector si endian
-			    (if (negative? si)
-				(+ len (if (<= left #x7F) 1 0))
-				(+ len (if (> left #x7F) 1 0))))))
+      (let ((len (if (negative? si)
+		     (+ len (if (<= left #x7F) 1 0))
+		     (+ len (if (> left #x7F) 1 0)))))
+	(sinteger->bytevector si endian (if (zero? len) 1 len)))))
    ((si endian size)
     (let ((bv (make-bytevector size (if (negative? si) #xFF 0))))
       (do ((i 0 (+ i 1)))
