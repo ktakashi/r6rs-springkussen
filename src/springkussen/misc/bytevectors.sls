@@ -113,8 +113,9 @@
     (let* ((bitlen (bitwise-length si))
 	   (len (+ (div bitlen 8) (if (zero? (bitwise-and bitlen 7)) 0 1)))
 	   (left (bitwise-and
-		  (bitwise-arithmetic-shift-right si
-		   (- (bitwise-and (+ bitlen 7) (bitwise-not 7)) 8))
+		  ;; TODO wtf?
+		  (bitwise-arithmetic-shift si
+		   (- (- (bitwise-and (+ bitlen 7) (bitwise-not 7)) 8)))
 		  #xFF)))
       (let ((len (if (negative? si)
 		     (+ len (if (<= left #x7F) 1 0))

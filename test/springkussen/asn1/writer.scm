@@ -34,6 +34,33 @@
 (test-asn1-writer #vu8(2 1 #x0) (make-der-integer 0))
 (test-asn1-writer #vu8(2 2 #xFF 1) (make-der-integer #x-FF))
 
+;; Bit string
+(test-asn1-writer #vu8(3 2 0 #xFF) (make-der-bit-string #vu8(#xFF)))
+(test-asn1-writer #vu8(3 2 5 #xFF) (make-der-bit-string #vu8(#xFF) 5))
+
+;; Octet string
+(test-asn1-writer #vu8(4 0) (make-der-octet-string #vu8()))
+(test-asn1-writer #vu8(4 3 1 2 3) (make-der-octet-string #vu8(1 2 3)))
+
+;; null
+(test-asn1-writer #vu8(5 0) (make-der-null))
+
+;; oid
+(test-asn1-writer #vu8(6 3 42 3 4) (make-der-object-identifier "1.2.3.4"))
+(test-asn1-writer #vu8(6 9 96 134 72 1 101 3 4 2 1)
+		  (make-der-object-identifier "2.16.840.1.101.3.4.2.1"))
+
+;; external
+(test-asn1-writer #vu8(40 22 6 3 42 3 4 2 1 1 4 4 1 2 3 4 162 6 4 4 5 6 7 8)
+		  (make-der-external "1.2.3.4" 1
+				     (make-der-octet-string #vu8(1 2 3 4))
+				     (make-der-tagged-object
+				      2 #t
+				      (make-der-octet-string #vu8(5 6 7 8)))))
+
+;; enumerated
+(test-asn1-writer #vu8(10 1 1) (make-der-enumerated 1))
+(test-asn1-writer #vu8(10 1 #xFF) (make-der-enumerated -1))
 
 ;; sequence
 (test-asn1-writer #vu8(48 0) (make-der-sequence '()))

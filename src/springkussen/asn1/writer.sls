@@ -46,6 +46,18 @@
 	   (write-der-boolean asn1-object output))
 	  ((der-integer? asn1-object)
 	   (write-der-integer asn1-object output))
+	  ((der-bit-string? asn1-object)
+	   (write-der-bit-string asn1-object output))
+	  ((der-octet-string? asn1-object)
+	   (write-der-octet-string asn1-object output))
+	  ((der-null? asn1-object)
+	   (write-der-null asn1-object output))
+	  ((der-object-identifier? asn1-object)
+	   (write-der-object-identifier asn1-object output))
+	  ((der-external? asn1-object)
+	   (write-der-external asn1-object output))
+	  ((der-enumerated? asn1-object)
+	   (write-der-enumerated asn1-object output))
 	  ((der-sequence? asn1-object)
 	   (write-der-sequence asn1-object output))
 	  ((der-set? asn1-object)
@@ -65,6 +77,9 @@
     (write-asn1-object asn1-object out)
     (e)))
 
+(define (asn1-string->string as) "not yet")
+
+
 ;; Boolean
 (define (write-der-boolean db output)
   (write-der-encoded BOOLEAN
@@ -77,6 +92,82 @@
     (write-der-encoded INTEGER
 		       (sinteger->bytevector v (endianness big))
 		       output)))
+
+;; Bit string
+(define (write-der-bit-string dbs output)
+  (let* ((value (der-bit-string-value dbs))
+	 (len (bytevector-length value))
+	 (bytes (make-bytevector (+ len 1) (der-bit-string-padding-bits dbs))))
+    (bytevector-copy! value 0 bytes 1 len)
+    (write-der-encoded BIT-STRING bytes output)))
+
+;; Octet string
+(define (write-der-octet-string dos output)
+  (write-der-encoded OCTET-STRING (der-octet-string-value dos) output))
+
+;; Der null
+(define (write-der-null asn1-object output)
+  (write-der-encoded NULL #vu8() output))
+
+;; Object identifier
+(define (write-der-object-identifier doi output)
+  (define (->oid-bytevector oid)
+    (define oid-length (string-length oid))
+    (define (oid-token oid s)
+      ;; we use string-ref, it's R6RS, so should O(1)
+      (let loop ((i s) (l '()))
+	(if (= oid-length i)
+	    (values (string->number (list->string (reverse l))) i)
+	    (let ((v (string-ref oid i)))
+	      (if (eqv? v #\.)
+		  (values (string->number (list->string (reverse l))) (+ i 1))
+		  (loop (+ i 1) (cons v l)))))))
+    (define (write-field n out)
+      (let ((byte-count (div (+ (bitwise-length n) 6) 7)))
+	(if (zero? byte-count) (put-u8 out 0)
+	    (let ((tmp (make-bytevector byte-count 0)))
+	      (do ((i (- byte-count 1) (- i 1))
+		   (n n (bitwise-arithmetic-shift n -7)))
+		  ((< i 0)
+		   (let* ((j (- byte-count 1))
+			  (v (bytevector-u8-ref tmp j)))
+		     (bytevector-u8-set! tmp j (bitwise-and v #x7F))
+		     (put-bytevector out tmp)))
+		(bytevector-u8-set! tmp i
+		 (bitwise-ior (bitwise-and n #x7F) #x80)))))))
+	      
+    (let*-values (((out e) (open-bytevector-output-port))
+		  ;; The first 2 numbers will be encoded into one byte
+		  ((n1 i) (oid-token oid 0))
+		  ((n2 i) (oid-token oid i)))
+      (write-field (+ (* n1 40) n2) out)
+      (let loop ((i i))
+	(if (= i oid-length)
+	    (e)
+	    (let-values (((n i) (oid-token oid i)))
+	      (write-field n out)
+	      (loop i))))))
+  (write-der-encoded OBJECT-IDENTIFIER
+   (->oid-bytevector (der-object-identifier-value doi))
+   output))
+
+;; External
+(define (write-der-external de output)
+  (let ((dr (der-external-dierct-reference de))
+	(idr (der-external-indierct-reference de))
+	(dvd (der-external-data-value-descriptor de))
+	(obj (der-external-encoding de)))
+    (let-values (((out e) (open-bytevector-output-port)))
+      (when dr (write-asn1-object (make-der-object-identifier dr) out))
+      (when idr (write-asn1-object (make-der-integer idr) out))
+      (when dvd (write-asn1-object dvd out))
+      (write-asn1-object obj out)
+      (write-der-encoded CONSTRUCTED EXTERNAL (e) output))))
+
+;; Enumerated
+(define (write-der-enumerated de output)
+  (write-der-encoded ENUMERATED
+   (sinteger->bytevector (der-enumerated-value de) (endianness big)) output))
 
 ;; Application specific
 (define (write-der-application-specific dap output)

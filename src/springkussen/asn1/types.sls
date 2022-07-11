@@ -44,13 +44,37 @@
 	    INTEGER
 	    der-integer? make-der-integer
 	    (rename (asn1-simple-object-value der-integer-value))
+
+	    asn1-string? (rename (asn1-string <asn1-string>)
+				 (asn1-simple-object-value asn1-string-value))
 	    
 	    BIT-STRING
+	    der-bit-string? make-der-bit-string
+	    (rename (asn1-simple-object-value der-bit-string-value))
+	    der-bit-string-padding-bits
+
 	    OCTET-STRING
+	    der-octet-string? make-der-octet-string
+	    (rename (asn1-simple-object-value der-octet-string-value))
+
 	    NULL
+	    der-null? (rename (%make-der-null make-der-null))
+	    
 	    OBJECT-IDENTIFIER
+	    der-object-identifier? make-der-object-identifier
+	    (rename (asn1-simple-object-value der-object-identifier-value))
+	    
 	    EXTERNAL
+	    der-external? make-der-external
+	    der-external-dierct-reference
+	    der-external-indierct-reference
+	    der-external-data-value-descriptor
+	    der-external-encoding
+	    
 	    ENUMERATED
+	    der-enumerated? make-der-enumerated
+	    (rename (asn1-simple-object-value der-enumerated-value))
+
 	    SEQUENCE
 	    SEQUENCE-OF
 	    asn1-collection? asn1-collection-elements
@@ -93,14 +117,14 @@
     (import (rnrs)
 	    (springkussen conditions))
 
-(define BOOLEAN			#x01)
-(define INTEGER			#x02)
-(define BIT-STRING		#x03)
-(define OCTET-STRING		#x04)
-(define NULL			#x05)
-(define OBJECT-IDENTIFIER	#x06)
-(define EXTERNAL		#x08)
-(define ENUMERATED		#x0a)
+(define BOOLEAN			#x01)	;
+(define INTEGER			#x02)	;
+(define BIT-STRING		#x03)	;
+(define OCTET-STRING		#x04)	;
+(define NULL			#x05)	;
+(define OBJECT-IDENTIFIER	#x06)	;
+(define EXTERNAL		#x08)	;
+(define ENUMERATED		#x0a)	;
 (define SEQUENCE		#x10)	;
 (define SEQUENCE-OF		#x10)	; for completeness
 (define SET			#x11)	;
@@ -141,6 +165,45 @@
 
 ;; Integer
 (define-record-type der-integer
+  (parent asn1-simple-object))
+
+;; String (except octet string)
+(define-record-type asn1-string
+  (parent asn1-simple-object))
+
+;; Bit string
+(define-record-type der-bit-string
+  (parent asn1-string)
+  (fields padding-bits)
+  (protocol (lambda (n)
+	      (case-lambda
+	       ((v) ((n v) 0))
+	       ((v pad) ((n v) pad))))))
+
+;; Octet string (chunk of bytes, it's binary data)
+(define-record-type der-octet-string
+  (parent asn1-simple-object))
+
+;; Der null
+(define-record-type der-null
+  (parent asn1-object))
+(define *der-null* (make-der-null))
+(define (%make-der-null) *der-null*)
+
+;; Der object identifier
+(define-record-type der-object-identifier
+  (parent asn1-simple-object))
+
+;; Der external
+(define-record-type der-external
+  (parent asn1-object)
+  (fields dierct-reference
+	  indierct-reference
+	  data-value-descriptor
+	  encoding))
+
+;; Der enumerated
+(define-record-type der-enumerated
   (parent asn1-simple-object))
 
 ;; Collection
