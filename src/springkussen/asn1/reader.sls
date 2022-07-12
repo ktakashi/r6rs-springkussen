@@ -83,13 +83,11 @@
 (define (build-tagged-object tag in constructed?)
   ;; TODO also BER?
   (cond (constructed?
-	 (let ((len (length in)))
-	   (case len
-	     ((0) (make-der-tagged-object tag constructed? #f))
-	     ((1) (make-der-tagged-object tag constructed? (car in)))
-	     (else
-	      (make-der-tagged-object tag constructed?
-				      (make-der-sequence in))))))
+	 (case (length in)
+	   ((0) (make-der-tagged-object tag constructed? #f))
+	   ((1) (make-der-tagged-object tag constructed? (car in)))
+	   (else
+	    (make-der-tagged-object tag constructed? (make-der-sequence in)))))
 	((zero? (bytevector-length in))
 	 (make-der-tagged-object tag constructed? #f))
 	(else
