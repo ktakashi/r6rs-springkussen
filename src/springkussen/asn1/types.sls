@@ -33,7 +33,7 @@
     (export asn1-object?
 	    asn1-encodable-object?
 	    (rename (asn1-encodable-object <asn1-encodable-object>))
-	    asn1-encodable-object-writer
+	    asn1-encodable-object->asn1-object
 
 	    asn1-simple-object? asn1-simple-object-value
 	    
@@ -87,18 +87,56 @@
 	    (rename (asn1-collection-elements der-set-elements))
 	    
 	    NUMERIC-STRING
+	    der-numeric-string? make-der-numeric-string
+	    (rename (asn1-simple-object-value der-numeric-string-value))
+	    
 	    PRINTABLE-STRING
+	    der-printable-string? make-der-printable-string
+	    (rename (asn1-simple-object-value der-printable-string-value))
+
 	    T61-STRING
+	    der-t61-string? make-der-t61-string
+	    (rename (asn1-simple-object-value der-t61-string-value))
+
 	    VIDEOTEX-STRING
+	    der-videotex-string? make-der-videotex-string
+	    (rename (asn1-simple-object-value der-videotex-string-value))
+
 	    IA5-STRING
+	    der-ia5-string? make-der-ia5-string
+	    (rename (asn1-simple-object-value der-ia5-string-value))
+	    
 	    UTC-TIME
+	    der-utc-time? make-der-utc-time
+	    (rename (asn1-simple-object-value der-utc-time-value))
+
 	    GENERALIZED-TIME
+	    der-generalized-time? make-der-generalized-time
+	    (rename (asn1-simple-object-value der-generalized-time-value))
+
 	    GRAPHIC-STRING
+	    der-graphic-string? make-der-graphic-string
+	    (rename (asn1-simple-object-value der-graphic-string-value))
+
 	    VISIBLE-STRING
+	    der-visible-string? make-der-visible-string
+	    (rename (asn1-simple-object-value der-visible-string-value))
+
 	    GENERAL-STRING
+	    der-general-string? make-der-general-string
+	    (rename (asn1-simple-object-value der-general-string-value))
+
 	    UNIVERSAL-STRING
+	    der-universal-string? make-der-universal-string
+	    (rename (asn1-simple-object-value der-universal-string-value))
+
 	    BMP-STRING
+	    der-bmp-string? make-der-bmp-string
+	    (rename (asn1-simple-object-value der-bmp-string-value))
+
 	    UTF8-STRING
+	    der-utf8-string? make-der-utf8-string
+	    (rename (asn1-simple-object-value der-utf8-string-value))
 
 	    CONSTRUCTED
 
@@ -130,13 +168,13 @@
 (define SET			#x11)	;
 (define SET-OF			#x11)	; for completeness
 
-(define NUMERIC-STRING		#x12)
-(define PRINTABLE-STRING	#x13)
-(define T61-STRING		#x14)
-(define VIDEOTEX-STRING		#x15)
-(define IA5-STRING		#x16)
-(define UTC-TIME		#x17)
-(define GENERALIZED-TIME	#x18)
+(define NUMERIC-STRING		#x12)	;
+(define PRINTABLE-STRING	#x13)	;
+(define T61-STRING		#x14)	;
+(define VIDEOTEX-STRING		#x15)	;
+(define IA5-STRING		#x16)	;
+(define UTC-TIME		#x17)	;
+(define GENERALIZED-TIME	#x18)	;
 (define GRAPHIC-STRING		#x19)
 (define VISIBLE-STRING		#x1a)
 (define GENERAL-STRING		#x1b)
@@ -152,7 +190,9 @@
 (define-record-type asn1-object)
 (define-record-type asn1-encodable-object
   (parent asn1-object)
-  (fields writer))
+  (fields converter))
+(define (asn1-encodable-object->asn1-object asn1-encodable)
+  ((asn1-encodable-object-converter asn1-encodable) asn1-encodable))
 
 ;; Simple value
 (define-record-type asn1-simple-object
@@ -218,6 +258,62 @@
 ;; Set
 (define-record-type der-set
   (parent asn1-collection))
+
+;; Numeric string
+(define-record-type der-numeric-string
+  (parent asn1-string)
+  ;; Maybe we should validate?
+  )
+
+;; Printable string
+(define-record-type der-printable-string
+  (parent asn1-string))
+
+;; T61 string
+(define-record-type der-t61-string
+  (parent asn1-string))
+
+;; Videotex string
+(define-record-type der-videotex-string
+  (parent asn1-string))
+
+;; IA5-STRING
+(define-record-type der-ia5-string
+  (parent asn1-string))
+
+;; UTC time (yyyyMMddhhmmssZ)
+(define-record-type der-utc-time
+  ;; Should we check the format?
+  (parent asn1-simple-object))
+
+;; Generalized-Time
+(define-record-type der-generalized-time
+  ;; Should we check the format?
+  (parent asn1-simple-object))
+
+;; Graphic string
+(define-record-type der-graphic-string
+  (parent asn1-string))
+
+;; Visible-String
+(define-record-type der-visible-string
+  (parent asn1-string))
+
+;; General-String
+(define-record-type der-general-string
+  (parent asn1-string))
+
+;; UNIVERSAL-STRING
+(define-record-type der-universal-string
+  (parent asn1-string))
+
+;; BMP-STRING
+(define-record-type der-bmp-string
+  (parent asn1-string))
+
+;; UTF8-STRING
+(define-record-type der-utf8-string
+  (parent asn1-string))
 
 ;; Application specific
 (define-record-type der-application-specific

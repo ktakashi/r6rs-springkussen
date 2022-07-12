@@ -12,14 +12,13 @@
   (protocol (lambda (p)
 	      (lambda ()
 		;; fake constructed
-		((p (lambda (this out) (put-bytevector out #vu8(#x20 0)))))))))
+		((p (lambda (this) (make-der-null))))))))
 (define-record-type non-empty
   (parent <asn1-encodable-object>)
   (protocol (lambda (p)
 	      (lambda ()
 		;; fake constructed
-		((p (lambda (this out)
-		      (put-bytevector out #vu8(#x20 1 0)))))))))
+		((p (lambda (this) (make-der-integer 1))))))))
 
 (define (test-asn1-writer expected obj)
   (let ((bv (asn1-object->bytevector obj)))
@@ -64,12 +63,67 @@
 
 ;; sequence
 (test-asn1-writer #vu8(48 0) (make-der-sequence '()))
-(test-asn1-writer #vu8(48 3 32 1 0) (make-der-sequence (list (make-non-empty))))
+(test-asn1-writer #vu8(48 3 2 1 1) (make-der-sequence (list (make-non-empty))))
 
 ;; set
 (test-asn1-writer #vu8(49 0) (make-der-set '()))
-(test-asn1-writer #vu8(49 3 32 1 0) (make-der-set (list (make-non-empty))))
+(test-asn1-writer #vu8(49 3 2 1 1) (make-der-set (list (make-non-empty))))
 
+;; numeric string
+(test-asn1-writer #vu8(18 5 49 50 51 52 53) (make-der-numeric-string "12345"))
+(test-asn1-writer #vu8(18 6 49 50 51 32 52 53)
+		  (make-der-numeric-string "123 45"))
+;; This is rather weird but we don't check at this moment
+(test-asn1-writer #vu8(18 7 49 50 51 32 52 53 97)
+		  (make-der-numeric-string "123 45a"))
+
+;; printable string
+(test-asn1-writer #vu8(19 8 65 66 67 68 32 69 70 36)
+		  (make-der-printable-string "ABCD EF$"))
+
+;; T61 string
+(test-asn1-writer #vu8(20 8 65 66 67 68 32 69 70 36)
+		  (make-der-t61-string "ABCD EF$"))
+
+;; Videotex string
+(test-asn1-writer #vu8(21 8 65 66 67 68 32 69 70 36)
+		  (make-der-videotex-string "ABCD EF$"))
+
+;; IA5 string
+(test-asn1-writer #vu8(22 8 65 66 67 68 32 69 70 36)
+		  (make-der-ia5-string "ABCD EF$"))
+
+;; UTC time
+(test-asn1-writer #vu8(23 13 50 50 48 55 49 50 48 57 49 57 53 49 90)
+		  (make-der-utc-time "220712091951Z"))
+
+;; Generalized time
+(test-asn1-writer #vu8(24 13 50 50 48 55 49 50 48 57 49 57 53 49 90)
+		  (make-der-generalized-time "220712091951Z"))
+
+;; Graphic string
+(test-asn1-writer #vu8(25 8 65 66 67 68 32 69 70 36)
+		  (make-der-graphic-string "ABCD EF$"))
+
+;; Visible string
+(test-asn1-writer #vu8(26 8 65 66 67 68 32 69 70 36)
+		  (make-der-visible-string "ABCD EF$"))
+
+;; General string
+(test-asn1-writer #vu8(27 8 65 66 67 68 32 69 70 36)
+		  (make-der-general-string "ABCD EF$"))
+
+;; Universal string
+(test-asn1-writer #vu8(28 8 65 66 67 68 32 69 70 36)
+		  (make-der-universal-string "ABCD EF$"))
+
+;; BMP string
+(test-asn1-writer #vu8(30 8 65 66 67 68 32 69 70 36)
+		  (make-der-bmp-string "ABCD EF$"))
+
+;; UTF8 string
+(test-asn1-writer #vu8(12 8 65 66 67 68 32 69 70 36)
+		  (make-der-utf8-string "ABCD EF$"))
 
 ;; application specific
 (test-asn1-writer
@@ -83,12 +137,25 @@
 ;; tagged object
 ;; empty
 (test-asn1-writer #vu8(161 0) (make-der-tagged-object 1 #f #f))
-(test-asn1-writer #vu8(161 0) (make-der-tagged-object 1 #f (make-fake-empty)))
-(test-asn1-writer #vu8(161 2 32 0)
+(test-asn1-writer #vu8(129 0)
+		  (make-der-tagged-object 1 #f (make-fake-empty)))
+(test-asn1-writer #vu8(161 2 5 0)
 		  (make-der-tagged-object 1 #t (make-fake-empty)))
 
-(test-asn1-writer #vu8(161 1 0) (make-der-tagged-object 1 #f (make-non-empty)))
-(test-asn1-writer #vu8(161 3 32 1 0)
+(test-asn1-writer #vu8(129 1 1) (make-der-tagged-object 1 #f (make-non-empty)))
+(test-asn1-writer #vu8(161 3 2 1 1)
 		  (make-der-tagged-object 1 #t (make-non-empty)))
+
+;; (describe-asn1-object
+;;  (make-der-sequence
+;;   (list
+;;    (make-der-object-identifier "1.3.6.1.4.1.311.21.20")
+;;    (make-der-set
+;;     (list
+;;      (make-der-sequence
+;;       (list (make-der-integer 9)
+;; 	    (make-der-utf8-string "vich3d.jdomcsc.nttest.microsoft.com")
+;; 	    (make-der-utf8-string "JDOMCSC\administrator")
+;; 	    (make-der-utf8-string "certreq"))))))))
 
 (test-end)

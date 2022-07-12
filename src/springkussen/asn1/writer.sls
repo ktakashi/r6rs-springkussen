@@ -32,6 +32,10 @@
 (library (springkussen asn1 writer)
     (export write-asn1-object
 	    asn1-object->bytevector
+
+	    asn1-string->string ;; unfortunately, this needs to be here
+
+	    describe-asn1-object
 	    )
     (import (rnrs)
 	    (springkussen asn1 types)
@@ -62,12 +66,39 @@
 	   (write-der-sequence asn1-object output))
 	  ((der-set? asn1-object)
 	   (write-der-set asn1-object output))
+	  ((der-numeric-string? asn1-object)
+	   (write-der-numeric-string asn1-object output))
+	  ((der-printable-string? asn1-object)
+	   (write-der-printable-string asn1-object output))
+	  ((der-t61-string? asn1-object)
+	   (write-der-t61-string asn1-object output))
+	  ((der-videotex-string? asn1-object)
+	   (write-der-videotex-string asn1-object output))
+	  ((der-ia5-string? asn1-object)
+	   (write-der-ia5-string asn1-object output))
+	  ((der-utc-time? asn1-object)
+	   (write-der-utc-time asn1-object output))
+	  ((der-generalized-time? asn1-object)
+	   (write-der-generalized-time asn1-object output))
+	  ((der-graphic-string? asn1-object)
+	   (write-der-graphic-string asn1-object output))
+	  ((der-visible-string? asn1-object)
+	   (write-der-visible-string asn1-object output))
+	  ((der-general-string? asn1-object)
+	   (write-der-general-string asn1-object output))
+	  ((der-universal-string? asn1-object)
+	   (write-der-universal-string asn1-object output))
+	  ((der-bmp-string? asn1-object)
+	   (write-der-bmp-string asn1-object output))
+	  ((der-utf8-string? asn1-object)
+	   (write-der-utf8-string asn1-object output))
 	  ((der-application-specific? asn1-object)
 	   (write-der-application-specific asn1-object output))
 	  ((der-tagged-object? asn1-object)
 	   (write-der-tagged-object asn1-object output))	  
 	  ((asn1-encodable-object? asn1-object)
-	   ((asn1-encodable-object-writer asn1-object) asn1-object output))
+	   (let ((converted (asn1-encodable-object->asn1-object asn1-object)))
+	     (write-asn1-object converted output)))
 	  (else
 	   (springkussen-assertion-violation 'write-asn1-object
 	    "Unknown ASN.1 object" asn1-object))))))
@@ -77,8 +108,22 @@
     (write-asn1-object asn1-object out)
     (e)))
 
-(define (asn1-string->string as) "not yet")
-
+(define *table* "0123456789ABCDEF")
+(define (asn1-string->string as)
+  (unless (asn1-string? as)
+    (springkussen-assertion-violation 'asn1-string->string
+				      "ASN.1 string is required" as))
+  (if (der-bit-string? as)
+      ;; Bit string requires a bit of treatment
+      (let ((encoded (asn1-object->bytevector as)))
+	(let-values (((out e) (open-string-output-port)))
+	  (do ((i 0 (+ i 1)) (len (bytevector-length encoded)))
+	      ((= i len) (e))
+	    (let* ((b (bytevector-u8-ref encoded i))
+		   (c (bitwise-and (bitwise-arithmetic-shift b -4) #xF)))
+	      (put-char out (string-ref *table* c))
+	      (put-char out (string-ref *table* (bitwise-and b #xF)))))))
+      (asn1-string-value as)))
 
 ;; Boolean
 (define (write-der-boolean db output)
@@ -212,6 +257,72 @@
 (define write-der-sequence (make-collection-encoder SEQUENCE))
 (define write-der-set (make-collection-encoder SET))
 
+;; Numeric string
+(define (write-der-numeric-string dns output)
+  (write-der-encoded NUMERIC-STRING
+   (string->utf8 (der-numeric-string-value dns)) output))
+
+;; Printable string
+(define (write-der-printable-string dps output)
+  (write-der-encoded PRINTABLE-STRING
+   (string->utf8 (der-printable-string-value dps)) output))
+
+;; T61 string
+(define (write-der-t61-string dts output)
+  (write-der-encoded T61-STRING
+   (string->utf8 (der-t61-string-value dts)) output))
+
+;; Videotex string
+(define (write-der-videotex-string dvs output)
+  (write-der-encoded VIDEOTEX-STRING
+   (string->utf8 (der-videotex-string-value dvs)) output))
+
+;; IA5 string
+(define (write-der-ia5-string dvs output)
+  (write-der-encoded IA5-STRING
+   (string->bytevector (der-ia5-string-value dvs)
+		       (make-transcoder (latin-1-codec))) output))
+
+;; UTC time
+(define (write-der-utc-time dut output)
+  (write-der-encoded UTC-TIME
+   (string->utf8 (der-utc-time-value dut)) output))
+
+;; Generalized time
+(define (write-der-generalized-time dgt output)
+  (write-der-encoded GENERALIZED-TIME
+   (string->utf8 (der-generalized-time-value dgt)) output))
+
+;; Graphic string
+(define (write-der-graphic-string dgs output)
+  (write-der-encoded GRAPHIC-STRING
+   (string->utf8 (der-graphic-string-value dgs)) output))
+
+;; Visible string
+(define (write-der-visible-string dvs output)
+  (write-der-encoded VISIBLE-STRING
+   (string->utf8 (der-visible-string-value dvs)) output))
+
+;; General string
+(define (write-der-general-string dvs output)
+  (write-der-encoded GENERAL-STRING
+   (string->utf8 (der-general-string-value dvs)) output))
+
+;; UNIVERSAL-STRING
+(define (write-der-universal-string dvs output)
+  (write-der-encoded UNIVERSAL-STRING
+   (string->utf8 (der-universal-string-value dvs)) output))
+
+;; BMP string
+(define (write-der-bmp-string dvs output)
+  (write-der-encoded BMP-STRING
+   (string->utf8 (der-bmp-string-value dvs)) output))
+
+;; UTF8 string
+(define (write-der-utf8-string dvs output)
+  (write-der-encoded UTF8-STRING
+   (string->utf8 (der-utf8-string-value dvs)) output))
+
 (define write-der-encoded
   (case-lambda
    ((tag bytes output)
@@ -252,6 +363,82 @@
 	    ((< i 0))
 	  (put-u8 p (bitwise-and (rash len i) #xff))))
       (put-u8 p len)))
+
+(define (describe-asn1-object-rec asn1-object output indent)
+  (define (put-indent)
+    (do ((i 0 (+ i 1))) ((= i indent))
+      (put-char output #\space)
+      (put-char output #\space)))
+  (define put-description 
+    (case-lambda
+     ((name obj)
+      (put-indent)
+      (display name output)
+      (display ": " output)
+      (put-datum output obj)
+      (newline output))
+     ((name)
+      (put-indent)
+      (display name output)
+      (newline output))))
+  (cond ((asn1-simple-object? asn1-object)
+	 (put-description (record-type-name (record-rtd asn1-object))
+			  (asn1-simple-object-value asn1-object)))
+	((der-null? asn1-object) (put-description "der-null"))
+	((asn1-collection? asn1-object)
+	 (put-description (record-type-name (record-rtd asn1-object)))
+	 (for-each (lambda (e) (describe-asn1-object-rec e output (+ indent 1)))
+		   (asn1-collection-elements asn1-object)))
+	((asn1-encodable-object? asn1-object)
+	 (describe-asn1-object-rec
+	  (asn1-encodable-object->asn1-object asn1-object) output indent))
+	;; Okay, compount with annoying definitions
+	((der-external? asn1-object)
+	 (let ((dr (der-external-dierct-reference asn1-object))
+	       (idr (der-external-indierct-reference asn1-object))
+	       (dvd (der-external-data-value-descriptor asn1-object))
+	       (obj (der-external-encoding asn1-object)))
+	   (put-description "der-external")
+	   (when dr
+	     (put-indent) (put-indent) (display "direct-reference: " output)
+	     (describe-asn1-object-rec (make-der-object-identifier dr)
+				       output 0))
+	   (when idr
+	     (put-indent) (put-indent) (display "indirect-reference: " output)
+	     (describe-asn1-object-rec (make-der-integer idr) output 0))
+	   (when dvd
+	     (put-indent) (put-indent)
+	     (display "data-value-descriptor: " output)
+	     (describe-asn1-object-rec dvd output (+ indent 3)))
+	   (put-indent) (put-indent) (display "encoding: " output)
+	   (describe-asn1-object-rec obj output (+ indent 3))))
+	((der-tagged-object? asn1-object)
+	 (put-indent) (display "der-tagged-object [" output)
+	 (display (der-tagged-object-tag-no asn1-object) output)
+	 (display "] " output)
+	 (if (der-tagged-object-explicit? asn1-object)
+	     (display "EXPLICIT " output)
+	     (display "IMPLICIT " output))
+	 (newline output)
+	 (describe-asn1-object-rec (der-tagged-object-obj asn1-object)
+				   output (+ indent 1)))
+	((der-application-specific? asn1-object)
+	 (put-indent) (display "der-application-specific [" output)
+	 (display (der-application-specific-tag asn1-object) output)
+	 (display "]" output)
+	 (when (der-application-specific-constructed? asn1-object)
+	   (display "CONSTRUCTED" output))
+	 (display ":" output)
+	 (put-datum output (der-application-specific-octets asn1-object))
+	 (newline output))
+	(else
+	 (springkussen-assertion-violation 'describe-asn1-object
+	   "Unknown ASN.1 object" asn1-object))))
+
+(define describe-asn1-object
+  (case-lambda
+   ((asn1-object) (describe-asn1-object asn1-object (current-output-port)))
+   ((asn1-object output) (describe-asn1-object-rec asn1-object output 0))))
 
 )
 
