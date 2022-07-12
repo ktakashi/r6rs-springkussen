@@ -34,3 +34,4 @@
  (hex-string->bytevector "6BB290DE2CBB5FCF82B0D32EB90F47293A28439F"))
 
 (test-end)
+(exit (zero? (test-runner-fail-count (test-runner-current))))

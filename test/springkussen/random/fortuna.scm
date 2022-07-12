@@ -22,3 +22,4 @@
   (random-descriptor:done! fd state))
 
 (test-end)
+(exit (zero? (test-runner-fail-count (test-runner-current))))

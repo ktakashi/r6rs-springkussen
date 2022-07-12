@@ -41,3 +41,5 @@
 (test-assert (probable-prime? 359334085968622831041960188598043661065388726959079837))
 
 (test-end)
+(exit (zero? (test-runner-fail-count (test-runner-current))))
+

@@ -59,3 +59,4 @@
 	     (hex-string->bytevector "4027994520c2c764bef1bcd1e163975161c895e0e710139c9f2df139"))
 
 (test-end)
+(exit (zero? (test-runner-fail-count (test-runner-current))))

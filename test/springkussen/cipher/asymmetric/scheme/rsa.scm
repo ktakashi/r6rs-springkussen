@@ -38,3 +38,4 @@
 	      (bytevector->integer (decrypt result))))
 
 (test-end)
+(exit (zero? (test-runner-fail-count (test-runner-current))))

@@ -247,4 +247,4 @@
 (for-each (lambda (v) (test-ecb rc2-descriptor v)) test-rc2-vectors)
 
 (test-end)
-
+(exit (zero? (test-runner-fail-count (test-runner-current))))

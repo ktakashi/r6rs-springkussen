@@ -43,3 +43,5 @@
 	   #xac #x49 #xda #x2e #x21 #x07 #xb6 #x7a)) 
 
 (test-end)
+(exit (zero? (test-runner-fail-count (test-runner-current))))
+

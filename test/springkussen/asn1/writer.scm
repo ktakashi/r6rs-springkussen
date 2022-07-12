@@ -159,3 +159,4 @@
 ;; 	    (make-der-utf8-string "certreq"))))))))
 
 (test-end)
+(exit (zero? (test-runner-fail-count (test-runner-current))))

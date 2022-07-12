@@ -107,3 +107,4 @@
     (test-equal text (decrypt-text key (encrypt-text key text)))))
 
 (test-end)
+(exit (zero? (test-runner-fail-count (test-runner-current))))

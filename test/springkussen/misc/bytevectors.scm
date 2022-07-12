@@ -19,3 +19,4 @@
 (test-bytevector-s #x-123456789012 #vu8(238 111 135 169 203 237) (endianness little))
 
 (test-end)
+(exit (zero? (test-runner-fail-count (test-runner-current))))

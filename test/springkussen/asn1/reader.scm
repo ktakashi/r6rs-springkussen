@@ -21,3 +21,5 @@
 (test-asn1-read (make-der-integer #x-FF) #vu8(2 2 #xFF 1))
 
 (test-end)
+(exit (zero? (test-runner-fail-count (test-runner-current))))
+

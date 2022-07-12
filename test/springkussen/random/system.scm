@@ -12,3 +12,4 @@
   (test-equal 7 (read-system-random! bv 2 7)))
 
 (test-end)
+(exit (zero? (test-runner-fail-count (test-runner-current))))

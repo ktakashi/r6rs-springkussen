@@ -23,3 +23,4 @@
 (test-assert (< (random-generator:random default-random-generator 10) 10))
 
 (test-end)
+(exit (zero? (test-runner-fail-count (test-runner-current))))
