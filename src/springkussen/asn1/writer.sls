@@ -95,7 +95,9 @@
 	  ((der-application-specific? asn1-object)
 	   (write-der-application-specific asn1-object output))
 	  ((der-tagged-object? asn1-object)
-	   (write-der-tagged-object asn1-object output))	  
+	   (write-der-tagged-object asn1-object output))
+	  ((der-unknown-tag? asn1-object)
+	   (write-der-unknown-tag asn1-object output))
 	  ((asn1-encodable-object? asn1-object)
 	   (let ((converted (asn1-encodable-object->asn1-object asn1-object)))
 	     (write-asn1-object converted output)))
@@ -323,6 +325,15 @@
   (write-der-encoded UTF8-STRING
    (string->utf8 (der-utf8-string-value dvs)) output))
 
+;; unknown tag
+(define (write-der-unknown-tag dut output)
+  (write-der-encoded (if (der-unknown-tag-constructed? dut)
+			 CONSTRUCTED
+			 0)
+		     (der-unknown-tag-number dut)
+		     (der-unknown-tag-data dut)
+		     output))
+
 (define write-der-encoded
   (case-lambda
    ((tag bytes output)
@@ -430,6 +441,14 @@
 	   (display "CONSTRUCTED" output))
 	 (display ":" output)
 	 (put-datum output (der-application-specific-octets asn1-object))
+	 (newline output))
+	((der-unknown-tag? asn1-object)
+	 (put-indent) (display "der-unknown-tag [" output)
+	 (display (der-unknown-tag-number asn1-object) output)
+	 (display "]" output)
+	 (when (der-unknown-tag-constructed? asn1-object)
+	   (display " CONSTRUCTED" output))
+	 (display ":") (put-datum output (der-unknown-tag-data asn1-object))
 	 (newline output))
 	(else
 	 (springkussen-assertion-violation 'describe-asn1-object
