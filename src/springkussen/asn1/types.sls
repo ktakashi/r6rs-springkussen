@@ -427,7 +427,8 @@
 (define (asn1-object=? a b)
   (cond ((eq? a b))
 	;; Is this valid for R6RS?
-	((eq? (record-rtd a) (record-rtd b))
+	((and (asn1-object? a) (asn1-object? b)
+	      (eq? (record-rtd a) (record-rtd b)))
 	 (cond ((asn1-simple-object? a)
 		(equal? (asn1-simple-object-value a)
 			(asn1-simple-object-value b)))

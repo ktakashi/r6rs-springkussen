@@ -243,7 +243,9 @@
 		(write-der-tag flag (der-tagged-object-tag-no dto) output)
 		(put-bytevector output bytes 1
 				(- (bytevector-length bytes) 1)))))
-	(write-der-encoded (bitwise-ior CONSTRUCTED TAGGED)
+	(write-der-encoded (if (der-tagged-object-explicit? dto)
+			       (bitwise-ior CONSTRUCTED TAGGED)
+			       TAGGED)
 			   (der-tagged-object-tag-no dto) #vu8() output))))
 
 ;; DER sequence

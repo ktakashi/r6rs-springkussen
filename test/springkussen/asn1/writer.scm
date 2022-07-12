@@ -131,12 +131,16 @@
  (make-der-application-specific #f OCTET-STRING (string->utf8 "hello")))
 
 (test-asn1-writer
- #vu8(#x64 #x5 #x68 #x65 #x6c #x6c #x6f)
- (make-der-application-specific #t OCTET-STRING (string->utf8 "hello")))
+ #vu8(112 9 48 7 4 5 104 101 108 108 111)
+ (make-der-application-specific #t SEQUENCE
+  (asn1-object->bytevector (make-der-sequence
+			    (list (make-der-octet-string
+				   (string->utf8 "hello")))))))
 
 ;; tagged object
 ;; empty
-(test-asn1-writer #vu8(161 0) (make-der-tagged-object 1 #f #f))
+(test-asn1-writer #vu8(161 0) (make-der-tagged-object 1 #t #f))
+(test-asn1-writer #vu8(129 0) (make-der-tagged-object 1 #f #f))
 (test-asn1-writer #vu8(129 0)
 		  (make-der-tagged-object 1 #f (make-fake-empty)))
 (test-asn1-writer #vu8(161 2 5 0)

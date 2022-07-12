@@ -35,6 +35,7 @@
     (import (rnrs)
 	    (springkussen asn1 tlv)
 	    (springkussen asn1 types)
+	    (springkussen asn1 writer)
 	    (springkussen conditions)
 	    (springkussen misc bytevectors))
 
@@ -60,9 +61,12 @@
   (when (eof-object? data)
     (springkussen-error 'read-asn1-object "EOF found during reading data"))
   (cond ((not (zero? (bitwise-and b APPLICATION)))
-	 (make-der-application-specific constructed? tag data))
+	 (if constructed?
+	     (make-der-application-specific constructed? tag
+	      (asn1-object->bytevector (car data)))
+	     (make-der-application-specific constructed? tag data)))
 	((not (zero? (bitwise-and b TAGGED)))
-	 (make-der-tagged-object tag #f data))
+	 (build-tagged-object tag data constructed?))
 	(constructed?
 	 (cond ((= tag OCTET-STRING)
 		(springkussen-error 'read-asn1-object
@@ -76,9 +80,49 @@
 
 (define read-object (make-tlv-parser asn1-object-builder))
 
-(define (build-der-external data)
-  ;; TBD
-  #f)
+(define (build-tagged-object tag in constructed?)
+  ;; TODO also BER?
+  (cond (constructed?
+	 (let ((len (length in)))
+	   (case len
+	     ((0) (make-der-tagged-object tag constructed? #f))
+	     ((1) (make-der-tagged-object tag constructed? (car in)))
+	     (else
+	      (make-der-tagged-object tag constructed?
+				      (make-der-sequence in))))))
+	((zero? (bytevector-length in))
+	 (make-der-tagged-object tag constructed? #f))
+	(else
+	 (make-der-tagged-object tag constructed? (make-der-octet-string in)))))
+
+(define (build-der-external odata)
+  ;; data must be (? denotes optional)
+  ;; oid? integer? asn1-object? tagged-object
+  ;; we do a bit lazily here
+  (let loop ((data odata) (dr #f) (idr #f) (dvd #f) (obj #f))
+    (cond ((null? data)
+	   (unless obj
+	     (springkussen-error 'read-object "Corrupted DER external" odata))
+	   (make-der-external dr idr dvd obj))
+	  ((der-object-identifier? (car data))
+	   (when dr
+	     (springkussen-error 'read-object "Corrupted DER external" odata))
+	   (loop (cdr data) (der-object-identifier-value (car data))
+		 idr dvd obj))
+	  ((der-integer? (car data))
+	   (when idr
+	     (springkussen-error 'read-object "Corrupted DER external" odata))
+	   (loop (cdr data) dr (der-integer-value (car data)) dvd obj))
+	  ((der-tagged-object? (car data))
+	   (when (or obj (not (null? (cdr data))))
+	     (springkussen-error 'read-object "Corrupted DER external" odata))
+	   (loop (cdr data) dr idr dvd (car data)))
+	  ((asn1-object? (car data))
+	   (when dvd
+	     (springkussen-error 'read-object "Corrupted DER external" odata))
+	   (loop (cdr data) dr idr (car data) obj))
+	  (else
+	   (springkussen-error  'read-object "Corrupted DER external" odata)))))
 
 (define (create-primitive-der-object tag-no bytes)
   (let ((ctr (cond ((assv tag-no *constructors*) => cdr)
