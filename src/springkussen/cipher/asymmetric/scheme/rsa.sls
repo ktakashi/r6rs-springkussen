@@ -268,25 +268,10 @@
       
 (define *rsa-key-pair-factory* (make-key-pair-factory rsa-key-pair-generator))
 
-;; We export SubjectPublicKeyInfo for ECDSA whose PublicKey is ECPoint
-;; and ECParameter is located in the algorithm identifier...
-
-;; SubjectPublicKeyInfo  ::=  SEQUENCE  {
-;;      algorithm            AlgorithmIdentifier,
-;;      subjectPublicKey     BIT STRING  }
-;;
-;; AlgorithmIdentifier  ::=  SEQUENCE  {
-;;      algorithm               OBJECT IDENTIFIER,
-;;      parameters              ANY DEFINED BY algorithm OPTIONAL  }
-;; 
-;; subjectPublicKey = encapsulated, RSAPublicKey ::= SEQUENCE {
+;; RSAPublicKey ::= SEQUENCE {
 ;;   modulus         INTEGER, -- n
 ;;   publicExponent  INTEGER  -- e
 ;; }
-;; NOTE: AlgorithmIdentifier will be a type in other libraries
-;; (not sure which one yet), but here we don't do it as we don't
-;; need to handle it as a type
-(define *rsa-oid* "1.2.840.113549.1.1.1")
 (define (rsa-public-key-importer rsa-key-bv)
   (define (err)
     (springkussen-assertion-violation 'rsa-public-key-importer
@@ -294,25 +279,14 @@
   (unless (bytevector? rsa-key-bv)
     (springkussen-assertion-violation 'rsa-public-key-importer
 				      "Bytevector required"))
-  (let ((asn1-object (bytevector->asn1-object rsa-key-bv)))
-    (unless (der-sequence? asn1-object) (err))
-    (let ((elements (asn1-collection-elements asn1-object)))
-      (unless (= (length elements) 2) (err))
-      (unless (and (der-sequence? (car elements))
-		   (der-bit-string? (cadr elements))) (err))
-      (let ((oid (car (der-sequence-elements (car elements))))
-	    (bit-string (cadr elements)))
-	(unless (der-object-identifier? oid) (err))
-	(unless (equal? *rsa-oid* (der-object-identifier-value oid)) (err))
-	(unless (der-bit-string? bit-string) (err))
-	(let ((seq (bytevector->asn1-object (der-bit-string-value bit-string))))
-	  (unless (der-sequence? seq) (err))
-	  (let ((e (der-sequence-elements seq)))
-	    (unless (= (length e) 2) (err))
-	    (unless (for-all der-integer? e) (err))
-	    (rsa-public-key-builder
-	     (modulus (der-integer-value (car e)))
-	     (exponent (der-integer-value (cadr e))))))))))
+  (let ((seq (bytevector->asn1-object rsa-key-bv)))
+    (unless (der-sequence? seq) (err))
+    (let ((e (der-sequence-elements seq)))
+      (unless (= (length e) 2) (err))
+      (unless (for-all der-integer? e) (err))
+      (rsa-public-key-builder
+       (modulus (der-integer-value (car e)))
+       (exponent (der-integer-value (cadr e)))))))
 
 (define (rsa-public-key-exporter rsa-key)
   (unless (rsa-public-key? rsa-key)
@@ -320,12 +294,8 @@
 				      "RSA public key required"))
   (asn1-object->bytevector
    (der-sequence
-    (der-sequence (make-der-object-identifier *rsa-oid*))
-    (make-der-bit-string
-     (asn1-object->bytevector
-      (der-sequence
-       (make-der-integer (rsa-public-key-modulus rsa-key))
-       (make-der-integer (rsa-public-key-exponent rsa-key))))))))
+    (make-der-integer (rsa-public-key-modulus rsa-key))
+    (make-der-integer (rsa-public-key-exponent rsa-key)))))
 
 (define *rsa-public-key-operation*
   (make-asymmetric-key-operation rsa-public-key-importer
