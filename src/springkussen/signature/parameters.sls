@@ -30,30 +30,20 @@
 
 #!r6rs
 (library (springkussen signature parameters)
-    (export define-signer-parameter
-	    define-verifier-parameter
+    (export define-signature-parameter
 	    
-	    signer-parameter? <signer-parameter>
-	    make-signer-parameter
-	    verifier-parameter? <verifier-parameter>
-	    make-verifier-parameter
+	    signature-parameter? <signature-parameter>
+	    make-signature-parameter
 
-	    make-signer-digest-parameter signer-digest-parameter?
-	    signer-parameter-md
-	    make-verifier-digest-parameter verifier-digest-parameter?
-	    verifier-parameter-md
+	    make-signature-digest-parameter signature-digest-parameter?
+	    signature-parameter-md
 	    )
     (import (rnrs)
 	    ;; Should not be needed...
 	    (springkussen signature descriptor))
-(define-syntax define-signer-parameter (make-define-signer-parameter))
-(define-syntax define-verifier-parameter (make-define-verifier-parameter))
+(define-syntax define-signature-parameter (make-define-signature-parameter))
 
-(define-signer-parameter <signer-digest-parameter>
-  make-signer-digest-parameter signer-digest-parameter?
-  (digest signer-parameter-md))
-
-(define-signer-parameter <verifier-digest-parameter>
-  make-verifier-digest-parameter verifier-digest-parameter?
-  (digest verifier-parameter-md))
+(define-signature-parameter <signature-digest-parameter>
+  make-signature-digest-parameter signature-digest-parameter?
+  (digest signature-parameter-md))
 )

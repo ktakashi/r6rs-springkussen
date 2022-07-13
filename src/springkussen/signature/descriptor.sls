@@ -44,13 +44,10 @@
 	    verifier-descriptor? verifier-descriptor-builder
 	    verifier-descriptor-name
 
-	    signer-parameter? make-signer-parameter
-	    verifier-parameter? make-verifier-parameter
+	    signature-parameter? make-signature-parameter
 
-	    (rename (signer-parameter <signer-parameter>)
-		    (verifier-parameter <verifier-parameter>))
-	    make-define-signer-parameter
-	    make-define-verifier-parameter
+	    (rename (signature-parameter <signature-parameter>))
+	    make-define-signature-parameter
 	    )
     (import (rnrs)
 	    (springkussen misc record))
@@ -105,7 +102,6 @@
 (define (verifier-descriptor:verify descriptor key S)
   ((verifier-descriptor-finalizer descriptor) key S))
 
-(define-compositable-record-type signer-parameter)
-(define-compositable-record-type verifier-parameter)
+(define-compositable-record-type signature-parameter)
 
 )

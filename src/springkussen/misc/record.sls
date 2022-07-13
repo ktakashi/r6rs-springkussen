@@ -67,8 +67,8 @@
 		(lambda params
 		  (unless (for-all pred params)
 		    (springkussen-assertion-violation 'composite-name
-		     (string-append (symbol->string 'name) " is required"
-				    params)))
+		     (string-append (symbol->string 'name) " is required")
+		     params))
 		  ((p) (apply append (map (lambda (p)
 					    (if (cpred p)
 						(get-elements p)

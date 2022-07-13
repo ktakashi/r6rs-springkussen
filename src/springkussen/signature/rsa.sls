@@ -31,11 +31,11 @@
 #!r6rs
 (library (springkussen signature rsa)
     (export rsa-signer-descriptor
-	    make-rsa-signer-encode-parameter rsa-signer-encode-parameter?
+	    make-rsa-signature-encode-parameter rsa-signature-encode-parameter?
 	    pkcs1-emsa-v1.5-encode
 
 	    rsa-verifier-descriptor
-	    make-rsa-verifier-verify-parameter rsa-verifier-verify-parameter?
+	    make-rsa-signature-verify-parameter rsa-signature-verify-parameter?
 	    pkcs1-emsa-v1.5-verify
 	    )
     (import (rnrs)
@@ -48,9 +48,9 @@
 	    (springkussen signature descriptor)
 	    (springkussen signature parameters))
 
-(define-signer-parameter <rsa-signer-encode-parameter>
-  make-rsa-signer-encode-parameter rsa-signer-encode-parameter?
-  (encoder signer-parameter-encoder))
+(define-signature-parameter <rsa-signaturre-encode-parameter>
+  make-rsa-signature-encode-parameter rsa-signature-encode-parameter?
+  (encoder signature-parameter-encoder))
 
 (define-record-type rsa-signer-state
   (fields key
@@ -62,9 +62,9 @@
   (unless (rsa-private-key? key)
     (springkussen-assertion-violation 'signer-init
 				      "Signer requires private key"))
-  (let* ((md (signer-parameter-md param *digest:sha256*))
+  (let* ((md (signature-parameter-md param *digest:sha256*))
 	 ;; TODO use PSS, but for now
-	 (encoder (signer-parameter-encoder param pkcs1-emsa-v1.5-encode))
+	 (encoder ((signature-parameter-encoder param pkcs1-emsa-v1.5-encode) param))
 	 (digester (make-digester md)))
     (unless (digest-descriptor-oid md)
       (springkussen-assertion-violation 'signer-init
@@ -86,36 +86,36 @@
 	(digester (rsa-signer-state-digester state))
 	(key (rsa-signer-state-key state)))
     (asymmetric-cipher:encrypt-bytevector cipher
-     (encoder state (rsa-private-key-modulus key) (digester:done digester)))))
+     (encoder (rsa-private-key-modulus key) (digester:done digester)))))
 
 ;; I believe these encodings are only for RSA
-(define (pkcs1-emsa-v1.5-encode state modulus m)
-  (define md (rsa-signer-state-md state))
+(define (pkcs1-emsa-v1.5-encode param)
+  (define md (signature-parameter-md param *digest:sha256*))
   (define oid (digest-descriptor-oid md))
+  (lambda (modulus m)
+    (let* ((em-len (div (+ (bitwise-length modulus) 7) 8))
+	   (digest (der-sequence (der-sequence
+				  (make-der-object-identifier oid)
+				  (make-der-null))
+				 (make-der-octet-string m)))
+	   (T (asn1-object->bytevector digest))
+	   (t-len (bytevector-length T)))
+      (when (< em-len (+ t-len 11))
+	(springkussen-error 'pkcs1-emsa-v1.5-encode
+			    "Intended encoded message length too short"))
+      (let* ((PS-len (- em-len t-len 3))
+	     ;; Initialize with PS value
+	     (EM (make-bytevector (+ PS-len 3 t-len) #xFF)))
+	(bytevector-u8-set! EM 0 #x00)
+	(bytevector-u8-set! EM 1 #x01)
+	(bytevector-u8-set! EM (+ PS-len 2) #x00)
+	(bytevector-copy! T 0 EM (+ PS-len 3) t-len) 
+	EM))))
 
-  (let* ((em-len (div (+ (bitwise-length modulus) 7) 8))
-	 (digest (der-sequence (der-sequence
-				(make-der-object-identifier oid)
-				(make-der-null))
-			       (make-der-octet-string m)))
-	 (T (asn1-object->bytevector digest))
-	 (t-len (bytevector-length T)))
-    (when (< em-len (+ t-len 11))
-      (springkussen-error 'pkcs1-emsa-v1.5-encode
-			  "Intended encoded message length too short"))
-    (let* ((PS-len (- em-len t-len 3))
-	   ;; Initialize with PS value
-	   (EM (make-bytevector (+ PS-len 3 t-len) #xFF)))
-      (bytevector-u8-set! EM 0 #x00)
-      (bytevector-u8-set! EM 1 #x01)
-      (bytevector-u8-set! EM (+ PS-len 2) #x00)
-      (bytevector-copy! T 0 EM (+ PS-len 3) t-len) 
-      EM)))
 
-
-(define-verifier-parameter <rsa-verifier-verify-parameter>
-  make-rsa-verifier-verify-parameter rsa-verifier-verify-parameter?
-  (encoder verifier-parameter-verify))
+(define-signature-parameter <rsa-signature-verify-parameter>
+  make-rsa-signature-verify-parameter rsa-signature-verify-parameter?
+  (verify signature-parameter-verify))
 
 (define rsa-signer-descriptor
   (signer-descriptor-builder
@@ -124,17 +124,19 @@
    (processor rsa-sign-process)
    (finalizer rsa-sign-done)))
 
-(define (pkcs1-emsa-v1.5-verify state modulus m S)
-  (let ((EM (pkcs1-emsa-v1.5-encode state modulus m)))
-    (bytevector-safe=? EM S)))
+(define (pkcs1-emsa-v1.5-verify param)
+  (define encode (pkcs1-emsa-v1.5-encode param))
+  (lambda (modulus m S)
+    (let ((EM (encode modulus m)))
+      (bytevector-safe=? EM S))))
 
 (define (rsa-verify-init key param)
   (unless (rsa-public-key? key)
     (springkussen-assertion-violation 'verifier-init
 				      "Verifier requires public key"))
-  (let* ((md (verifier-parameter-md param *digest:sha256*))
+  (let* ((md (signature-parameter-md param *digest:sha256*))
 	 ;; TODO use PSS, but for now
-	 (verifier (verifier-parameter-verify param pkcs1-emsa-v1.5-verify))
+	 (verifier ((signature-parameter-verify param pkcs1-emsa-v1.5-verify) param))
 	 (digester (make-digester md)))
     (unless (digest-descriptor-oid md)
       (springkussen-assertion-violation 'verifier-init
@@ -156,8 +158,7 @@
 	(key (rsa-signer-state-key state)))
     ;; TODO do we want to check the signature length?
     (let ((EM (asymmetric-cipher:decrypt-bytevector cipher S)))
-      (verifier state (rsa-public-key-modulus key)
-		(digester:done digester) EM))))
+      (verifier (rsa-public-key-modulus key) (digester:done digester) EM))))
 
 (define rsa-verifier-descriptor
   (verifier-descriptor-builder

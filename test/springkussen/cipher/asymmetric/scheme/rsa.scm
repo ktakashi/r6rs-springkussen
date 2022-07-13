@@ -35,6 +35,7 @@
 	   (r (asymmetric-scheme-descriptor:decrypt rsa state-key bv)))
       (asymmetric-scheme-descriptor:done rsa state-key)
       r))
+  (encrypt in)
   (test-equal result (encrypt in))
   (test-equal (bytevector->integer in)
 	      (bytevector->integer (decrypt result))))
