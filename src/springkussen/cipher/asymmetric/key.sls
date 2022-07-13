@@ -35,7 +35,7 @@
 		    (private-key <private-key>))
 	    asymmetric-key?
 
-	    asymmetric-key-operation?
+	    asymmetric-key-operation? make-asymmetric-key-operation
 	    (rename (asymmetric-key-operation <asymmetric-key-operation>))
 	    asymmetric-key:import-key
 	    asymmetric-key:export-key

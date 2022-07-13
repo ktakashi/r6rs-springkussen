@@ -35,6 +35,9 @@
 	    *rsa-key-factory*
 	    *rsa-key-pair-factory*
 
+	    *rsa-public-key-operation*
+	    *rsa-private-key-operation*
+
 	    rsa-key-parameter?
 	    make-rsa-public-key-parameter rsa-public-key-parameter?
 	    make-rsa-private-key-parameter rsa-private-key-parameter?
@@ -57,6 +60,7 @@
 	    rsa-crt-private-key-q rsa-crt-private-key-dP
 	    rsa-crt-private-key-dQ rsa-crt-private-key-qP)
     (import (rnrs)
+	    (springkussen asn1)
 	    (springkussen conditions)
 	    (springkussen cipher key)
 	    (springkussen cipher asymmetric key)
@@ -263,4 +267,140 @@
       (make-rsa-key-pair n e d p q))))
       
 (define *rsa-key-pair-factory* (make-key-pair-factory rsa-key-pair-generator))
+
+;; We export SubjectPublicKeyInfo for ECDSA whose PublicKey is ECPoint
+;; and ECParameter is located in the algorithm identifier...
+
+;; SubjectPublicKeyInfo  ::=  SEQUENCE  {
+;;      algorithm            AlgorithmIdentifier,
+;;      subjectPublicKey     BIT STRING  }
+;;
+;; AlgorithmIdentifier  ::=  SEQUENCE  {
+;;      algorithm               OBJECT IDENTIFIER,
+;;      parameters              ANY DEFINED BY algorithm OPTIONAL  }
+;; 
+;; subjectPublicKey = encapsulated, RSAPublicKey ::= SEQUENCE {
+;;   modulus         INTEGER, -- n
+;;   publicExponent  INTEGER  -- e
+;; }
+;; NOTE: AlgorithmIdentifier will be a type in other libraries
+;; (not sure which one yet), but here we don't do it as we don't
+;; need to handle it as a type
+(define *rsa-oid* "1.2.840.113549.1.1.1")
+(define (rsa-public-key-importer rsa-key-bv)
+  (define (err)
+    (springkussen-assertion-violation 'rsa-public-key-importer
+				      "Invalid RSA public key object"))
+  (unless (bytevector? rsa-key-bv)
+    (springkussen-assertion-violation 'rsa-public-key-importer
+				      "Bytevector required"))
+  (let ((asn1-object (bytevector->asn1-object rsa-key-bv)))
+    (unless (der-sequence? asn1-object) (err))
+    (let ((elements (asn1-collection-elements asn1-object)))
+      (unless (= (length elements) 2) (err))
+      (unless (and (der-sequence? (car elements))
+		   (der-bit-string? (cadr elements))) (err))
+      (let ((oid (car (der-sequence-elements (car elements))))
+	    (bit-string (cadr elements)))
+	(unless (der-object-identifier? oid) (err))
+	(unless (equal? *rsa-oid* (der-object-identifier-value oid)) (err))
+	(unless (der-bit-string? bit-string) (err))
+	(let ((seq (bytevector->asn1-object (der-bit-string-value bit-string))))
+	  (unless (der-sequence? seq) (err))
+	  (let ((e (der-sequence-elements seq)))
+	    (unless (= (length e) 2) (err))
+	    (unless (for-all der-integer? e) (err))
+	    (rsa-public-key-builder
+	     (modulus (der-integer-value (car e)))
+	     (exponent (der-integer-value (cadr e))))))))))
+
+(define (rsa-public-key-exporter rsa-key)
+  (unless (rsa-public-key? rsa-key)
+    (springkussen-assertion-violation 'rsa-public-key-exporter
+				      "RSA public key required"))
+  (asn1-object->bytevector
+   (der-sequence
+    (der-sequence (make-der-object-identifier *rsa-oid*))
+    (make-der-bit-string
+     (asn1-object->bytevector
+      (der-sequence
+       (make-der-integer (rsa-public-key-modulus rsa-key))
+       (make-der-integer (rsa-public-key-exponent rsa-key))))))))
+
+(define *rsa-public-key-operation*
+  (make-asymmetric-key-operation rsa-public-key-importer
+				 rsa-public-key-exporter))
+
+;;  RSAPrivateKey ::= SEQUENCE {
+;;      version           Version,
+;;      modulus           INTEGER,  -- n
+;;      publicExponent    INTEGER,  -- e
+;;      privateExponent   INTEGER,  -- d
+;;      prime1            INTEGER,  -- p
+;;      prime2            INTEGER,  -- q
+;;      exponent1         INTEGER,  -- d mod (p-1)
+;;      exponent2         INTEGER,  -- d mod (q-1)
+;;      coefficient       INTEGER,  -- (inverse of q) mod p
+;;      otherPrimeInfos   OtherPrimeInfos OPTIONAL -- We do not support this.
+;;  }
+;;  Version ::= INTEGER { two-prime(0), multi(1) }
+;;     (CONSTRAINED BY
+;;     {-- version must be multi if otherPrimeInfos present --})
+
+(define (rsa-private-key-importer rsa-key-bv)
+  (define (check . args)
+    (unless (for-all der-integer? args)
+      (springkussen-assertion-violation 'rsa-private-key-importer
+					"Invalid RSA private key object")))
+  (unless (bytevector? rsa-key-bv)
+    (springkussen-assertion-violation 'rsa-private-key-importer
+				      "Bytevector required"))
+  (let ((asn1-object (bytevector->asn1-object rsa-key-bv)))
+    (unless (der-sequence? asn1-object)
+      (springkussen-assertion-violation 'rsa-private-key-importer
+					"Invalid RSA private key object"))
+    (let ((elements (asn1-collection-elements asn1-object)))
+      (when (< (length elements) 9)
+	(springkussen-assertion-violation 'rsa-private-key-importer
+					  "Invalid RSA private key object"))
+      (let ((v (car elements))
+	    (m (cadr elements))
+	    (e (caddr elements))
+	    (pe (cadddr elements))
+	    (p (car (cddddr elements)))
+	    (q (cadr (cddddr elements)))
+	    (dP (caddr (cddddr elements)))
+	    (dQ (cadddr (cddddr elements)))
+	    (qP (car (cddddr (cddddr elements)))))
+	(check v m e pe p q dP dQ qP)
+	(rsa-crt-private-key-builder
+	 (modulus (der-integer-value m))
+	 (private-exponent (der-integer-value pe))
+	 (public-exponent (der-integer-value e))
+	 (p (der-integer-value p))
+	 (q (der-integer-value q))
+	 (dP (der-integer-value dP))
+	 (dQ (der-integer-value dQ))
+	 (qP (der-integer-value qP)))))))
+(define (rsa-private-key-exporter rsa-key)
+  ;; As far as I know, RSA CRT key is the only exportable one
+  ;; or defined on PKCS / RFC
+  (unless (rsa-crt-private-key? rsa-key)
+    (springkussen-assertion-violation 'rsa-private-key-exporter
+				      "RSA CRT private key is required"))
+  (asn1-object->bytevector
+   (der-sequence
+    (make-der-integer 0)
+    (make-der-integer (rsa-private-key-modulus rsa-key))
+    (make-der-integer (rsa-crt-private-key-public-exponent rsa-key))
+    (make-der-integer (rsa-private-key-private-exponent rsa-key))
+    (make-der-integer (rsa-crt-private-key-p rsa-key))
+    (make-der-integer (rsa-crt-private-key-q rsa-key))
+    (make-der-integer (rsa-crt-private-key-dP rsa-key))
+    (make-der-integer (rsa-crt-private-key-dQ rsa-key))
+    (make-der-integer (rsa-crt-private-key-qP rsa-key)))))
+(define *rsa-private-key-operation*
+  (make-asymmetric-key-operation rsa-private-key-importer
+				 rsa-private-key-exporter))
+
 )

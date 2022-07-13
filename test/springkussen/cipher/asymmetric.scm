@@ -21,6 +21,9 @@
 (key-pair-test *key-pair-factory:rsa* (make-key-size-key-parameter 1024))
 (key-pair-test *key-pair-factory:rsa* #f)
 
+(test-assert (asymmetric-key-operation? *public-key-operation:rsa*))
+(test-assert (asymmetric-key-operation? *private-key-operation:rsa*))
+
 (define test-asymmetric-ciper
   (case-lambda
    ((pt ct spec pub-key priv-key)

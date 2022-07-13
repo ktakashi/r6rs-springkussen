@@ -41,6 +41,7 @@
 
 	    asymmetric-key:import-key
 	    asymmetric-key:export-key
+	    asymmetric-key-operation?
 	    
 	    ;; Scheme descriptors
 	    asymmetric-scheme-descriptor?
@@ -61,6 +62,10 @@
 	    ;; key factories
 	    (rename (*rsa-key-factory* *key-factory:rsa*)
 		    (*rsa-key-pair-factory* *key-pair-factory:rsa*))
+	    ;; key operations
+	    (rename (*rsa-public-key-operation* *public-key-operation:rsa*)
+		    (*rsa-private-key-operation* *private-key-operation:rsa*))
+	    
 	    key-parameter?
 	    make-rsa-public-key-parameter rsa-public-key-parameter?
 	    make-rsa-private-key-parameter rsa-private-key-parameter?
