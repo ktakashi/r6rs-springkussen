@@ -42,7 +42,6 @@
 	    
 	    asymmetric-state?
 	    (rename (asymmetric-state <asymmetric-state>))
-	    asymmetric-state-for-encryption?
 	    asymmetric-state-for-private-key?
 
 	    )
@@ -77,6 +76,5 @@
   ((asymmetric-scheme-descriptor-block-sizer descriptor) state))
 
 (define-record-type asymmetric-state
-  (fields for-encryption?
-	  for-private-key?))
+  (fields for-private-key?))
 )

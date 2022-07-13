@@ -114,12 +114,9 @@
 (define-syntax rsa-crt-private-key-builder
   (make-record-builder rsa-crt-private-key))
 
-
 (define *rsa-min-keysize* 1024)		; should be 2046 nowadays
 
-(define (rsa-setup key param)
-  ;; TODO for-encryption? from the param
-  (make-rsa-state #t (private-key? key) key))
+(define (rsa-setup key param) (make-rsa-state (private-key? key) key))
 
 (define (rsa-encrypt key pt ps)
   (let ((in (make-bytevector (- (bytevector-length pt) ps))))
@@ -162,7 +159,6 @@
 
 (define (rsa-block-size-retriever state)
   (define key (rsa-state-key state))
-  (define for-encryption? (asymmetric-state-for-encryption? state))
   (let ((modulus (if (public-key? key)
 		     (rsa-public-key-modulus key)
 		     (rsa-private-key-modulus key))))

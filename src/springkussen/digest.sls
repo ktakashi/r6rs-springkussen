@@ -36,6 +36,7 @@
 	    digester:init!
 	    digester:process!
 	    digester:done!
+	    digester:done
 	    
 	    digest-descriptor?
 	    digest-descriptor-name
@@ -106,6 +107,10 @@
       (digest-descriptor:process! (digester-descriptor digester)
 				  state bv start end)
       digester))))
+
+(define (digester:done digester)
+  (let ((size (digest-descriptor-digest-size (digester-descriptor digester))))
+    (digester:done! digester (make-bytevector size 0))))
 
 (define digester:done!
   (case-lambda
