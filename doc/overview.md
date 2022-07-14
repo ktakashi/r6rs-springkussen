@@ -15,10 +15,11 @@ provides multiple libraries per categories.
 
 Below is the list of libraries:
 
-- [`(springkussen conditions)`](./conditions.md): Defines base conditions
 - [`(springkussen cipher symmetric)`](./symmetric.md): Symmetric cipher APIs
 - [`(springkussen cipher asymmetric)`](./asymmetric.md): Asymmetric cipher APIs
+- [`(springkussen conditions)`](./conditions.md): Defines base conditions
 - [`(springkussen digest)`](./digest.md): Digest APIs
+- [`(springkussen mac)`](./mac.md): MAC APIs
 - [`(springkussen random)`](./random.md): Secure random generator APIs
 
 
