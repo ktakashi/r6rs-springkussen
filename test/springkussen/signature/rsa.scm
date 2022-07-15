@@ -1,5 +1,6 @@
 #!r6rs
 (import (rnrs)
+	(springkussen asn1)
 	(springkussen cipher asymmetric key)
 	(springkussen signature descriptor)
 	(springkussen signature parameters)
@@ -66,8 +67,16 @@
 
 ;;
 (define (test-rsa-emsa-pss pub-key-asn msg sig param)
+  (define (->subject-public-key-info rsa-key)
+    (asn1-object->bytevector
+     (der-sequence
+      (der-sequence
+       (make-der-object-identifier "1.2.840.113549.1.1.1")
+       (make-der-null))
+      (make-der-bit-string rsa-key))))
   (define pub-key
-    (asymmetric-key:import-key *public-key-operation:rsa* pub-key-asn))
+    (asymmetric-key:import-key *public-key-operation:rsa*
+			       (->subject-public-key-info pub-key-asn)))
   (define (verify sig)
     (let ((s (verifier-descriptor:init rsa-verifier-descriptor pub-key param)))
       (verifier-descriptor:process! rsa-verifier-descriptor s msg)

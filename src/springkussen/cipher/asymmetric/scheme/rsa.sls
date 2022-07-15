@@ -231,7 +231,7 @@
 
 (define (rsa-key-pair-generator key-parameter)
   (define (rsa-random-prime prng size e check)
-    (let loop ((p (random-generator:random prng (/ size 16))))
+    (let loop ((p (generate-random-prime (/ size 16) prng)))
       (if (and (or (not check) (not (= p check)))
 	       (= 1 (gcd (- p 1) e)))
 	  p
@@ -266,6 +266,17 @@
       
 (define *rsa-key-pair-factory* (make-key-pair-factory rsa-key-pair-generator))
 
+;; We export SubjectPublibKeyInfo
+(define rsa-oid (make-der-object-identifier "1.2.840.113549.1.1.1"))
+
+;; SubjectPublicKeyInfo {PUBLIC-KEY: IOSet} ::= SEQUENCE {
+;;     algorithm        AlgorithmIdentifier {PUBLIC-KEY, {IOSet}},
+;;     subjectPublicKey BIT STRING
+;; }
+;; AlgorithmIdentifier ::= SEQUENCE {
+;;   identifier OBJECT IDENTIFIER,
+;;   param      NULL
+;; }
 ;; RSAPublicKey ::= SEQUENCE {
 ;;   modulus         INTEGER, -- n
 ;;   publicExponent  INTEGER  -- e
@@ -281,10 +292,16 @@
     (unless (der-sequence? seq) (err))
     (let ((e (der-sequence-elements seq)))
       (unless (= (length e) 2) (err))
-      (unless (for-all der-integer? e) (err))
-      (rsa-public-key-builder
-       (modulus (der-integer-value (car e)))
-       (exponent (der-integer-value (cadr e)))))))
+      (let ((aid (car e))(key (cadr e)))
+	(unless (and (der-sequence? aid) (der-bit-string? key)) (err))
+	(unless (asn1-object=? rsa-oid (car (der-sequence-elements aid))) (err))
+	(let ((seq (bytevector->asn1-object (der-bit-string-value key))))
+	  (unless (der-sequence? seq) (err))
+	  (let ((e (asn1-collection-elements seq)))
+	    (unless (for-all der-integer? e) (err))
+	    (rsa-public-key-builder
+	     (modulus (der-integer-value (car e)))
+	     (exponent (der-integer-value (cadr e))))))))))
 
 (define (rsa-public-key-exporter rsa-key)
   (unless (rsa-public-key? rsa-key)
@@ -292,8 +309,12 @@
 				      "RSA public key required"))
   (asn1-object->bytevector
    (der-sequence
-    (make-der-integer (rsa-public-key-modulus rsa-key))
-    (make-der-integer (rsa-public-key-exponent rsa-key)))))
+    (der-sequence rsa-oid (make-der-null))
+    (make-der-bit-string
+     (asn1-object->bytevector
+      (der-sequence
+       (make-der-integer (rsa-public-key-modulus rsa-key))
+       (make-der-integer (rsa-public-key-exponent rsa-key))))))))
 
 (define *rsa-public-key-operation*
   (make-asymmetric-key-operation rsa-public-key-importer

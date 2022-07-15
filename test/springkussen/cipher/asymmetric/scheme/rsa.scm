@@ -42,8 +42,14 @@
 
 (let ((expected (asn1-object->bytevector
 		 (der-sequence
-		  (make-der-integer modulus)
-		  (make-der-integer #x010001)))))
+		  (der-sequence
+		   (make-der-object-identifier "1.2.840.113549.1.1.1")
+		   (make-der-null))
+		  (make-der-bit-string
+		   (asn1-object->bytevector
+		    (der-sequence
+		     (make-der-integer modulus)
+		     (make-der-integer #x010001))))))))
   (test-equal "RSA public key export" expected
 	      (asymmetric-key:export-key *rsa-public-key-operation* public-key))
   (test-assert "RSA public key import (1)"
