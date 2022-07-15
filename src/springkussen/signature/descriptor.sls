@@ -36,14 +36,12 @@
 	    signer-descriptor:process!
 	    signer-descriptor:sign
 
+	    verifier-descriptor? verifier-descriptor-builder
 	    verifier-descriptor-name
 	    verifier-descriptor:init
 	    verifier-descriptor:process!
 	    verifier-descriptor:verify
 	    
-	    verifier-descriptor? verifier-descriptor-builder
-	    verifier-descriptor-name
-
 	    signature-parameter? make-signature-parameter
 
 	    (rename (signature-parameter <signature-parameter>))

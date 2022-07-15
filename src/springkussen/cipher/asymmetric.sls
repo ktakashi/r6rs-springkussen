@@ -72,7 +72,7 @@
 	    make-rsa-crt-private-key-parameter rsa-crt-private-key-parameter?
 	    make-random-generator-key-parameter random-generator-key-parameter?
 	    make-key-size-key-parameter key-size-key-parameter?
-	    make-public-exponent-key-parameter public-exponent-key-parameter?
+
 	    
 	    pkcs1-v1.5-encoding oaep-encoding
 

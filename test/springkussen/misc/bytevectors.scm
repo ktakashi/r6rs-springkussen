@@ -18,5 +18,19 @@
 (test-bytevector-s #x-123456789012 #vu8(237 203 169 135 111 238) (endianness big))
 (test-bytevector-s #x-123456789012 #vu8(238 111 135 169 203 237) (endianness little))
 
+(let ((bv #vu8(#x11 #x22 #x33 #x44 #xFF 0 1 2 0 #xFF)))
+  (test-equal #x1122 (bytevector->uinteger bv (endianness big) 0 2))
+  (test-equal #x22 (bytevector->uinteger bv (endianness big) 1 2))
+  (test-equal #x2211 (bytevector->uinteger bv (endianness little) 0 2))
+  (test-equal #x22 (bytevector->uinteger bv (endianness little) 1 2))
+
+  (test-equal #x1122 (bytevector->sinteger bv (endianness big) 0 2))
+  (test-equal #x22 (bytevector->sinteger bv (endianness big) 1 2))
+  (test-equal #x2211 (bytevector->sinteger bv (endianness little) 0 2))
+  (test-equal #x22 (bytevector->sinteger bv (endianness little) 1 2))
+  (test-equal #x-FFFF (bytevector->sinteger bv (endianness big) 4 7))
+  (test-equal #x-FFFE (bytevector->sinteger bv (endianness little) 7))
+  )
+  
 (test-end)
 (exit (zero? (test-runner-fail-count (test-runner-current))))

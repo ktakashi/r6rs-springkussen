@@ -53,7 +53,7 @@
 	    der-octet-string? make-der-octet-string
 	    der-octet-string-value
 
-	    make-der-null 	    
+	    der-null? make-der-null 	    
 
 	    der-object-identifier? make-der-object-identifier
 	    der-object-identifier-value

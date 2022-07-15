@@ -42,9 +42,11 @@
 	    make-rsa-public-key-parameter rsa-public-key-parameter?
 	    make-rsa-private-key-parameter rsa-private-key-parameter?
 	    make-rsa-crt-private-key-parameter rsa-crt-private-key-parameter?
-	    make-random-generator-key-parameter random-generator-key-parameter?
 	    make-key-size-key-parameter key-size-key-parameter?
 	    make-public-exponent-key-parameter public-exponent-key-parameter?
+
+	    make-random-generator-key-parameter random-generator-key-parameter?
+	    key-parameter-random-generator ;; To reuse, this is too common
 	    
 	    rsa-public-key-builder
 	    rsa-private-key-builder

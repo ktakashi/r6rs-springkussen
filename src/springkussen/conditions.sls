@@ -32,7 +32,10 @@
 (library (springkussen conditions)
     (export springkussen-condition? &springkussen
 	    springkussen-assertion-violation
-	    springkussen-error)
+	    springkussen-error
+
+	    springkussen-implementation-restriction-violation
+	    )
     (import (rnrs))
 
 (define-condition-type &springkussen &serious
@@ -60,5 +63,14 @@
 			      (and (not (null? irr))
 				   (make-irritants-condition irr)))))))
 
+(define (springkussen-implementation-restriction-violation who msg . irr)
+  (raise (apply condition
+		(filter values
+			(list (make-springkussen-condition)
+			      (make-implementation-restriction-violation)
+			      (and who (make-who-condition who))
+			      (make-message-condition msg)
+			      (and (not (null? irr))
+				   (make-irritants-condition irr)))))))
 )
 

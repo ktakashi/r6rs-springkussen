@@ -33,7 +33,8 @@
     (export bytevector-append bytevector-xor bytevector-xor!
 	    bytevector->uinteger uinteger->bytevector
 	    bytevector->sinteger sinteger->bytevector
-	    bytevector-safe=?)
+	    bytevector-safe=?
+	    bytevector-split-at*)
     (import (rnrs))
 
 (define (bytevector-append . bv*)
@@ -57,20 +58,25 @@
 (define (bytevector-xor bv0 start0 bv1 start1 size)
   (bytevector-xor! (bytevector-copy bv0) start0 bv1 start1 size))
 
-(define (bytevector->uinteger bv endian)
-  (define size (bytevector-length bv))
-  (case endian
-    ((big)
-     (do ((i 0 (+ i 1)) (r 0 (bitwise-ior (bitwise-arithmetic-shift r 8)
-					  (bytevector-u8-ref bv i))))
-	 ((= i size) r)))
-    ((little)
-     (do ((i (- size 1) (- i 1))
-	  (r 0 (bitwise-ior (bitwise-arithmetic-shift r 8)
-			    (bytevector-u8-ref bv i))))
-	 ((< i 0) r)))
-    (else
-     (assertion-violation 'bytevector->uinteger "Unknown endian type" endian))))
+(define bytevector->uinteger
+  (case-lambda
+   ((bv endian) (bytevector->uinteger bv endian 0))
+   ((bv endian s) (bytevector->uinteger bv endian s (bytevector-length bv)))
+   ((bv endian s e)
+    (define size e)
+    (case endian
+      ((big)
+       (do ((i s (+ i 1)) (r 0 (bitwise-ior (bitwise-arithmetic-shift r 8)
+					    (bytevector-u8-ref bv i))))
+	   ((= i size) r)))
+      ((little)
+       (do ((i (- size 1) (- i 1))
+	    (r 0 (bitwise-ior (bitwise-arithmetic-shift r 8)
+			      (bytevector-u8-ref bv i))))
+	   ((< i s) r)))
+      (else
+       (assertion-violation 'bytevector->uinteger "Unknown endian type"
+			    endian))))))
 
 (define uinteger->bytevector
   (case-lambda
@@ -90,22 +96,26 @@
 						"Unknown endian" endian)))))
 	  (bytevector-u8-set! bv pos n)))))))
 
-(define (bytevector->sinteger bv endian)
-  (define size (bytevector-length bv))
-  (if (zero? (bytevector-length bv))
-      0
-      (case endian
-	((big)
-	 (if (> (bytevector-u8-ref bv 0) #x7F)
-	     (- (bytevector->uinteger bv endian) (expt 256 size))
-	     (bytevector->uinteger bv endian)))
-	((little)
-	 (if (> (bytevector-u8-ref bv (- size 1)) #x7F)
-	     (- (bytevector->uinteger bv endian) (expt 256 size))
-	     (bytevector->uinteger bv endian)))
-	(else
-	 (assertion-violation
-	  'bytevector->sinteger "Unknown endian type" endian)))))
+(define bytevector->sinteger
+  (case-lambda
+   ((bv endian) (bytevector->sinteger bv endian 0))
+   ((bv endian s) (bytevector->sinteger bv endian s (bytevector-length bv)))
+   ((bv endian s e)
+    (define size (- e s))
+    (if (zero? size)
+	0
+	(case endian
+	  ((big)
+	   (if (> (bytevector-u8-ref bv s) #x7F)
+	       (- (bytevector->uinteger bv endian s e) (expt 256 size))
+	       (bytevector->uinteger bv endian s e)))
+	  ((little)
+	   (if (> (bytevector-u8-ref bv (- e 1)) #x7F)
+	       (- (bytevector->uinteger bv endian s e) (expt 256 size))
+	       (bytevector->uinteger bv endian s e)))
+	  (else
+	   (assertion-violation
+	    'bytevector->sinteger "Unknown endian type" endian)))))))
 
 (define sinteger->bytevector
   (case-lambda
@@ -147,5 +157,20 @@
 	  ;; This should never happen
 	  (else #f))))
 
+(define bytevector-split-at*
+  (case-lambda
+   ((bv k) (bytevector-split-at* bv k #f))
+   ((bv k padding)
+    (unless (and (integer? k) (not (negative? k)))
+      (assertion-violation 'bytevector-split-at* 
+			   "index must be non-negative integer" k))
+    (let ((len (bytevector-length bv)))
+      (if (< k len)
+	  (let ((r1 (make-bytevector k))
+		(r2 (make-bytevector (- (bytevector-length bv) k))))
+	    (bytevector-copy! bv 0 r1 0 k)
+	    (bytevector-copy! bv k r2 0 (bytevector-length r2))
+	    (values r1 r2))
+	  (values (if padding (padding bv) bv) #vu8()))))))
 )
 
