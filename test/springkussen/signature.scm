@@ -44,11 +44,11 @@
 (define (test-self-check desc kp-op signer verifier key-param sig-param)
   (define kp (key-pair-factory:generate-key-pair kp-op key-param))
   (define (sign msg)
-    (signer:sign-message (make-signer signer sig-param)
-			 (key-pair-private kp) msg))
+    (signer:sign-message 
+     (make-signer signer (key-pair-private kp) sig-param) msg))
   (define (verify msg S)
-    (verifier:verify-signature (make-verifier verifier sig-param)
-			       (key-pair-public kp) msg S))
+    (verifier:verify-signature 
+     (make-verifier verifier (key-pair-public kp) sig-param) msg S))
   (define (check msg)
     (let ((r (verify msg (sign msg))))
       (test-assert (string-append desc "(" (utf8->string msg) ")") r)))

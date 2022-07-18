@@ -166,19 +166,20 @@
 	    (springkussen signature ecdsa))
 
 
-(define (signer:sign-message signer key message)
-  (signer:init! signer key)
+(define (signer:sign-message signer message)
+  (signer:init! signer)
   (signer:process! signer message)
   (signer:sign signer))
 
-(define (verifier:verify-signature verifier key message signature)
-  (verifier:init! verifier key)
+(define (verifier:verify-signature verifier message signature)
+  (verifier:init! verifier)
   (verifier:process! verifier message)
   (verifier:verify verifier signature))
 
 (define-record-type signature
   (fields (mutable state)
 	  descriptor
+	  key
 	  parameter))
 
 (define-syntax define-signature:process!
@@ -198,28 +199,31 @@
 (define-record-type signer
   (parent signature)
   (protocol (lambda (n)
-	      (define (check descriptor)
+	      (define (check key descriptor)
+		(unless (private-key? key)
+		  (springkussen-assertion-violation 'make-signer
+						    "Private key required"))
 		(unless (signer-descriptor? descriptor)
 		  (springkussen-assertion-violation 'make-signer
 						    "Signer descriptor required"
 						    descriptor)))
 	      (case-lambda
-	       ((descriptor)
-		(check descriptor)
-		((n #f descriptor #f)))
-	       ((descriptor parameter)
-		(check descriptor)
+	       ((descriptor key)
+		(check key descriptor)
+		((n #f descriptor key #f)))
+	       ((descriptor key parameter)
+		(check key descriptor)
 		(unless (signature-parameter? parameter)
 		  (springkussen-assertion-violation 'make-signer
 		    "Parameter must be signature parameter" parameter))
-		((n #f descriptor parameter)))))))
+		((n #f descriptor key parameter)))))))
 		
 
-(define (signer:init! signer key)
+(define (signer:init! signer)
   (unless (signer? signer)
     (springkussen-assertion-violation 'signer:init! "Signer required" signer))
   (let ((st (signer-descriptor:init (signature-descriptor signer)
-				    key
+				    (signature-key signer)
 				    (signature-parameter signer))))
     (signature-state-set! signer st)
     signer))
@@ -233,27 +237,30 @@
 (define-record-type verifier
   (parent signature)
   (protocol (lambda (n)
-	      (define (check descriptor)
+	      (define (check key descriptor)
+		(unless (public-key? key)
+		  (springkussen-assertion-violation 'make-verifier
+						    "Public key required"))
 		(unless (verifier-descriptor? descriptor)
 		  (springkussen-assertion-violation 'make-verifier
 		    "Verifier descriptor required" descriptor)))
 	      (case-lambda
-	       ((descriptor)
-		(check descriptor)
-		((n #f descriptor #f)))
-	       ((descriptor parameter)
-		(check descriptor)
+	       ((descriptor key)
+		(check key descriptor)
+		((n #f descriptor key #f)))
+	       ((descriptor key parameter)
+		(check key descriptor)
 		(unless (signature-parameter? parameter)
 		  (springkussen-assertion-violation 'make-verifier
 		    "Parameter must be signature parameter" parameter))
-		((n #f descriptor parameter)))))))
+		((n #f descriptor key parameter)))))))
 
-(define (verifier:init! verifier key)
+(define (verifier:init! verifier)
   (unless (verifier? verifier)
     (springkussen-assertion-violation 'verifier:init!
 				      "Verifier required" verifier))
   (let ((st (verifier-descriptor:init (signature-descriptor verifier)
-				      key
+				      (signature-key verifier)
 				      (signature-parameter verifier))))
     (signature-state-set! verifier st)
     verifier))
