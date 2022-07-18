@@ -199,14 +199,15 @@
 		   (default-salt digest-size)))
   (define salt-len (bytevector-length salt))
   (define mgf (signature-parameter-mgf param mgf-1))
-  (define mgf-md (signature-parameter-mgf-digest param *digest:sha1*))
+  (define mgf-md (signature-parameter-mgf-digest param md))
   
   (lambda (modulus m)
-    (define em-bits (bitwise-length modulus))
+    (define em-bits (- (bitwise-length modulus) 1))
     (define em-len (div (+ em-bits 7) 8))
     (when (< em-len (+ digest-size salt-len 2))
       (springkussen-assertion-violation 'pkcs1-emsa-pss-encode
 	"Intended encoded message length too short"))
+
     (let ((m-dash (make-bytevector (+ digest-size salt-len 8) 0)))
       ;; M' = (0x)00 00 00 00 00 00 00 00 || mHash || salt
       (bytevector-copy! m 0 m-dash 8 digest-size)
@@ -219,7 +220,7 @@
 	(bytevector-copy! salt 0 DB (+ PS-len 1) salt-len)
 	(let* ((db-mask (mgf H (- em-len digest-size 1) mgf-md))
 	       (masked-db (bytevector-xor! DB 0 db-mask 0
-					   (bytevector-length DB)))
+					   (bytevector-length db-mask)))
 	       (bit-mask (bitwise-arithmetic-shift-right
 			  #xFF (- (* em-len 8) em-bits))))
 	  (bytevector-u8-set! masked-db 0
@@ -242,7 +243,7 @@
   (define salt-len (or (signature-parameter-salt-length param #f)
 		       digest-size))
   (define mgf (signature-parameter-mgf param mgf-1))
-  (define mgf-md (signature-parameter-mgf-digest param *digest:sha1*))
+  (define mgf-md (signature-parameter-mgf-digest param md))
 
   (lambda (modulus m EM)
     (define (check-zero bv limit)
@@ -250,7 +251,7 @@
 	(if (= i limit)
 	    ok?
 	    (loop (+ i 1) (and (zero? (bytevector-u8-ref bv i)) ok?)))))
-    (define em-bits (bitwise-length modulus))
+    (define em-bits (- (bitwise-length modulus) 1))
     (define em-len (div (+ em-bits 7) 8))
     
     ;; we do entire step here to prevent oracle attack
@@ -263,12 +264,10 @@
       (bytevector-copy! EM mask-length H 0 digest-size)
       (let* ((db-mask (mgf H mask-length mgf-md))
 	      ;; we need masked-db to check at the last step
-	     (mdb-copy (bytevector-copy masked-db))
-	     (DB (bytevector-xor! mdb-copy 0 db-mask 0 mask-length))
+	     (DB (bytevector-xor masked-db 0 db-mask 0 mask-length))
 	     (limit2 (- em-len digest-size salt-len 2)))
 	(bytevector-u8-set! DB 0
-			    (bitwise-and (bytevector-u8-ref DB 0)
-					 (bitwise-not bit-mask)))
+			    (bitwise-and (bytevector-u8-ref DB 0) bit-mask))
 	(let ((check0 (check-zero DB limit2))
 	      (check1 (= #x01 (bytevector-u8-ref DB limit2)))
 	      (m-dash (make-bytevector (+ 8 digest-size salt-len) 0)))
