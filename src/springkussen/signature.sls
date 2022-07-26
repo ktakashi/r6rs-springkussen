@@ -49,7 +49,8 @@
 	    verifier-descriptor-name
 	    
 	    signature-parameter? make-signature-parameter
-
+	    make-signature-digest-parameter signature-digest-parameter?
+	    
 	    ;; re-export (for convenience)
 	    asymmetric-key?
 	    asymmetric-key:import-key
@@ -92,7 +93,7 @@
 	    *public-key-operation:rsa*
 	    *private-key-operation:rsa*
 
-	    key-parameter?
+	    key-parameter? make-key-parameter
 	    make-rsa-public-key-parameter rsa-public-key-parameter?
 	    make-rsa-private-key-parameter rsa-private-key-parameter?
 	    make-rsa-crt-private-key-parameter rsa-crt-private-key-parameter?

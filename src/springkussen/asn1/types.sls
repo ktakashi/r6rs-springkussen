@@ -86,13 +86,15 @@
 	    SEQUENCE-OF
 	    asn1-collection? asn1-collection-elements
 	    der-sequence? make-der-sequence
-	    (rename (%der-sequence der-sequence)
+	    (rename (der-sequence <der-sequence>)
+		    (%der-sequence der-sequence)
 		    (asn1-collection-elements der-sequence-elements))
 	    
 	    SET
 	    SET-OF
 	    der-set? make-der-set
-	    (rename (%der-set der-set)
+	    (rename (der-set <der-set>)
+		    (%der-set der-set)
 		    (asn1-collection-elements der-set-elements))
 	    
 	    NUMERIC-STRING

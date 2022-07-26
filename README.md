@@ -142,3 +142,25 @@ In this library, the following MAC algorithms are supported
 - [x] HMAC
 
 We may support more algorithms, such as CMAC, but comes later
+
+Signature
+---------
+
+In this library, the following signature algorithms are supported
+
+- [x] RSA
+- [x] ECDSA
+
+For RSA signature, the following encodings are supported
+
+- [x] RSASSA-PSS
+- [x] RSASSA-PKCS1-v1_5
+
+X.509 certificate
+-----------------
+
+In this library, the following X.509 related formats are supported
+
+- [x] X.509 Certificate
+- [x] X.509 Certificate Signing Request
+

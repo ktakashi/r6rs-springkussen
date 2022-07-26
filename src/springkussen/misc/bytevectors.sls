@@ -34,7 +34,9 @@
 	    bytevector->uinteger uinteger->bytevector
 	    bytevector->sinteger sinteger->bytevector
 	    bytevector-safe=?
-	    bytevector-split-at*)
+	    bytevector-split-at*
+	    bytevector->hex-string
+	    )
     (import (rnrs))
 
 (define (bytevector-append . bv*)
@@ -172,5 +174,18 @@
 	    (bytevector-copy! bv k r2 0 (bytevector-length r2))
 	    (values r1 r2))
 	  (values (if padding (padding bv) bv) #vu8()))))))
+
+(define (bytevector->hex-string bv)
+  (define (hex->char i)
+    (cond ((< i 10) (integer->char (+ i 48)))
+	  (else   (integer->char (+ i 55)))))
+  (let-values (((out e) (open-string-output-port)))
+    (do ((i 0 (+ i 1)) (len (bytevector-length bv)))
+	((= i len) (e))
+      (let* ((b (bytevector-u8-ref bv i))
+	     (hi (bitwise-arithmetic-shift (bitwise-and b #xF0) -4))
+	     (lo (bitwise-and b #x0F)))
+	(put-char out (hex->char hi))
+	(put-char out (hex->char lo))))))
 )
 

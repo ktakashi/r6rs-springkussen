@@ -459,7 +459,9 @@
 (define describe-asn1-object
   (case-lambda
    ((asn1-object) (describe-asn1-object asn1-object (current-output-port)))
-   ((asn1-object output) (describe-asn1-object-rec asn1-object output 0))))
+   ((asn1-object output) (describe-asn1-object asn1-object output 0))
+   ((asn1-object output indent)
+    (describe-asn1-object-rec asn1-object output indent))))
 
 )
 
