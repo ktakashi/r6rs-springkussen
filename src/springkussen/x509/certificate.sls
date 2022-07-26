@@ -142,7 +142,6 @@
 		  (unless (x509-name? subject) (err subject))
 		  (unless (subject-public-key-info? subject-public-key-info)
 		    (err subject-public-key-info))
-		  ;; FIXME...
 		  (unless (or (not issuer-unique-id)
 			      (der-bit-string? issuer-unique-id))
 		    (err issuer-unique-id))
@@ -182,6 +181,12 @@
 	     (= (der-tagged-object-tag-no e) tag)
 	     e)))
     (exists (tag-of tag) e))
+  (define (ensure-bit-string d)
+    (cond ((der-bit-string? d) d)
+	  ((der-octet-string? d)
+	   (make-der-bit-string (der-octet-string-value d)))
+	  ;; let the constructor throw an error
+	  (else d)))
   (unless (der-sequence? asn1-object)
     (springkussen-assertion-violation 'asn1-object->x509-tbs-certificate
 				      "DER Sequence required" asn1-object))
@@ -211,9 +216,13 @@
        (asn1-object->x509-validity validity)
        (asn1-object->x509-name subject)
        (asn1-object->subject-public-key-info spki)
-       issuer-unique-id
-       subject-unique-id
-       (and extensions (asn1-object->x509-extensions extensions))))))
+       (and issuer-unique-id
+	    (ensure-bit-string (der-tagged-object-obj issuer-unique-id)))
+       (and subject-unique-id
+	    (ensure-bit-string (der-tagged-object-obj subject-unique-id)))
+       (and extensions
+	    (asn1-object->x509-extensions
+	     (der-tagged-object-obj extensions)))))))
 			       
 
 ;; Certificate  ::=  SEQUENCE  {

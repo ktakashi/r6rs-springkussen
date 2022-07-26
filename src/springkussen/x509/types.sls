@@ -203,15 +203,11 @@
 		    "X509 extension required" extensions))
 		((n extensions))))))
 (define (asn1-object->x509-extensions asn1-object)
-  (unless (der-tagged-object? asn1-object)
-    (springkussen-assertion-violation asn1-object->x509-extensions
+  (unless (der-sequence? asn1-object)
+    (springkussen-assertion-violation 'asn1-object->x509-extensions
 				      "Invalid format" asn1-object))
-  (let ((v (der-tagged-object-obj asn1-object)))
-    (unless (der-sequence? v)
-      (springkussen-assertion-violation asn1-object->x509-extensions
-					"Invalid format" asn1-object))
     (make-x509-extensions
-     (map asn1-object->x509-extension (asn1-collection-elements v)))))
+     (map asn1-object->x509-extension (asn1-collection-elements asn1-object))))
 
 ;; I'm not entirely sure if we put these here, but couldn't find
 ;; any better place (on PKCS#7 specification, it says these are
