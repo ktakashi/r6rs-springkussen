@@ -183,5 +183,27 @@
     (test-assert 3 (x509-certificate:version ecdsa-c))
     (test-assert (x509-certificate:validate ecdsa-c
 		  (list (make-x509-signature-validator ecdsa-c))))))
-  
+
+(let* ((rsa-kp (key-pair-factory:generate-key-pair *key-pair-factory:rsa*))
+       (ecdsa-kp (key-pair-factory:generate-key-pair *key-pair-factory:ecdsa*
+		  (make-ecdsa-ec-parameter *ec-parameter:sect163k1*)))
+       (ca-subject (make-x509-distinguished-names '(C "NL") '(CN "CA")))
+       (subject (make-x509-distinguished-names '(C "NL") '(CN "Springkussen")))
+       (ca-cert (make-x509-self-signed-certificate ecdsa-kp 103
+						   ca-subject validity)))
+  (let* ((csr-builder (x509-certificate-signing-request-builder-builder
+		       (subject subject)
+		       (key-pair ecdsa-kp)
+		       (attributes
+			(x509-attributes
+			 (make-x509-challenge-password-attribute "test")))))
+	 (csr (x509-certificate-signing-request-builder:build csr-builder)))
+    (let ((c (x509-certificate-signing-request:sign
+	      csr 104 validity ca-cert (key-pair-private ecdsa-kp))))
+      ;; Self CA
+      (test-assert (x509-certificate:validate c
+		     (list (make-x509-signature-validator ca-cert)))))))
+      
+
+
 (test-end)

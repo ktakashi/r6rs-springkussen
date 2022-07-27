@@ -45,6 +45,10 @@
 
 	    make-x509-attributes x509-attributes?
 	    (rename (asn1-collection-elements x509-attributes-values))
+	    make-x509-challenge-password-attribute
+	    x509-challenge-password-attribute?
+	    make-x509-extension-request-attribute
+	    x509-extension-request-attribute
 	    
 	    make-x509-certification-request-info
 	    x509-certification-request-info?
@@ -68,6 +72,7 @@
 	    (springkussen misc bytevectors)
 	    (springkussen signature)
 	    (springkussen x509 types)
+	    (springkussen x509 extensions)
 	    (springkussen x509 certificate)
 	    (springkussen x509 signature))
 
@@ -92,8 +97,31 @@
   (let ((e (asn1-collection-elements asn1-object)))
     (unless (= (length e) 2)
       (springkussen-assertion-violation 'asn1-object->x509-attribute
-					"Invalid format" asn1-object))
+					"Invalid format" asn1-object)) 
+    ;; TODO check OID and dispatch to known attribute ctr
     (make-x509-attribute (car e) (cadr e))))
+
+(define-record-type x509-challenge-password-attribute
+  (parent x509-attribute)
+  (protocol (lambda (n)
+	      (lambda (value)
+		(unless (string? value)
+		  (springkussen-assertion-violation
+		   'make-x509-challenge-password-attribute
+		   "Challenge password value must be a string"))
+		((n (make-der-object-identifier "1.2.840.113549.1.9.7")
+		    (der-set (make-der-utf8-string value))))))))
+
+(define-record-type x509-extension-request-attribute
+  (parent x509-attribute)
+  (protocol (lambda (n)
+	      (lambda (extensions)
+		(unless (x509-extensions? extensions)
+		  (springkussen-assertion-violation
+		   'make-x509-extension-request-attribute
+		   "X509 extensions is required" extensions))
+		((n (make-der-object-identifier "1.2.840.113549.1.9.14")
+		    (der-set extensions)))))))
 
 (define-record-type x509-attributes
   (parent <der-set>)
@@ -135,7 +163,7 @@
 	   (x509-certification-request-info-version cri)
 	   (x509-certification-request-info-subject cri)
 	   (x509-certification-request-info-subject-pk-info cri)
-	   (if attr (list (make-der-tagged-object 0 #t attr)) '()))))
+	   (if attr (list (make-der-tagged-object 0 #f attr)) '()))))
 
 (define (asn1-object->x509-certification-request-info asn1-object)
   (define (get-attributes e)
@@ -234,10 +262,22 @@
   (read-x509-certificate-signing-request (open-bytevector-input-port bv)))
 
 
+(define (x509-certificate-signing-request:certification-request-info csr)
+  (define cr (x509-certificate-signing-request-cr csr))
+  (x509-certification-request-certification-request-info cr))
+
 (define (x509-certificate-signing-request:subject csr)
   (define cr (x509-certificate-signing-request-cr csr))
   (define cri (x509-certification-request-certification-request-info cr))
   (x509-name->list (x509-certification-request-info-subject cri)))
+
+(define (x509-certificate-signing-request:signature-algorithm csr)
+  (define cr (x509-certificate-signing-request-cr csr))
+  (x509-certification-request-signature-algorithm cr))
+
+(define (x509-certificate-signing-request:signature csr)
+  (define cr (x509-certificate-signing-request-cr csr))
+  (der-bit-string-value (x509-certification-request-signature cr)))
 
 (define (x509-certificate-signing-request:subject-pk-info csr)
   (define cr (x509-certificate-signing-request-cr csr))
@@ -268,14 +308,29 @@
      #f
      #f
      extensions))
-  (define signature-algorithm
-    (make-x509-default-signature-algorithm private-key))
-  (define signer
-    ((signature-algorithm->signer-creator signature-algorithm) private-key))
-  (let* ((tbs (csr->tbs csr sn signature-algorithm validity ca-cert extensions))
+  (define (verify-signature csr)
+    (define verify-sa
+      (x509-certificate-signing-request:signature-algorithm csr))
+    (define verifier ((signature-algorithm->verifier-creator verify-sa)
+		      (subject-public-key-info->public-key
+		       (x509-certificate-signing-request:subject-pk-info csr))))
+    (define cri
+      (x509-certificate-signing-request:certification-request-info csr))
+    (define message (asn1-object->bytevector cri))
+    (unless (verifier:verify-signature verifier message
+	     (x509-certificate-signing-request:signature csr))
+      (springkussen-error 'x509-certificate-signing-request:sign
+			  "CSR contains invalid signature")))
+
+  (define sign-sa (make-x509-default-signature-algorithm private-key))
+  (define signer ((signature-algorithm->signer-creator sign-sa) private-key))
+  
+  (verify-signature csr)
+  ;; TODO check extension-request attribute and merge to extensions
+  (let* ((tbs (csr->tbs csr sn sign-sa validity ca-cert extensions))
 	 (signing-content (asn1-object->bytevector tbs))
 	 (sig (signer:sign-message signer signing-content)))
     (make-x509-certificate
      (make-x509-certificate-structure
-      tbs signature-algorithm (make-der-bit-string sig) #f))))
+      tbs sign-sa (make-der-bit-string sig) #f))))
 )

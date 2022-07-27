@@ -64,9 +64,18 @@
 	    read-x509-certificate-signing-request
 	    bytevector->x509-certificate-signing-request
 
-	    make-x509-attribute x509-attribute?
-	    x509-attribute-type x509-attribute-values
-	    x509-attribute->asn1-object
+	    x509-certificate-signing-request-builder?
+	    x509-certificate-signing-request-builder-builder
+	    x509-certificate-signing-request-builder:build
+
+	    make-x509-attributes x509-attributes?
+	    x509-attributes
+	    
+	    x509-attribute?
+	    make-x509-challenge-password-attribute
+	    x509-challenge-password-attribute?
+	    make-x509-extension-request-attribute
+	    x509-extension-request-attribute
 
 	    ;; Extensions
 	    make-x509-extensions x509-extensions? x509-extensions
@@ -91,11 +100,13 @@
 	    x509-authority-key-identifier-authority-cert-issuer
 	    x509-authority-key-identifier-serial-number
 	    
-	    describe-x509-certificate)
+	    describe-x509-certificate
+	    )
     (import (rnrs)
 	    (springkussen asn1)
 	    (springkussen conditions)
 	    (springkussen misc bytevectors)
+	    (springkussen misc record)
 	    (springkussen signature)
 	    (springkussen x509 types)
 	    (springkussen x509 extensions)
@@ -110,6 +121,8 @@
 (define (x509-extensions-length e)
   (length (asn1-collection-elements e)))
 (define (x509-extensions-elements e) (asn1-collection-elements e))
+
+(define (x509-attributes . a*) (make-x509-attributes a*))
 
 (define (make-x509-validity not-before not-after)
   (c:make-x509-validity
@@ -165,6 +178,46 @@
       (make-x509-certificate
        (make-x509-certificate-structure
 	tbs sa (make-der-bit-string sig) #f))))))
+
+(define-record-type x509-certificate-signing-request-builder
+  (fields key-pair
+	  subject
+	  attributes
+	  signature-algorithm-retriever))
+(define-syntax x509-certificate-signing-request-builder-builder
+  (make-record-builder x509-certificate-signing-request-builder
+   ((signature-algorithm-retriever make-x509-default-signature-algorithm))))
+
+(define x509-csr-builder-key-pair
+  x509-certificate-signing-request-builder-key-pair)
+(define x509-csr-builder-subject
+  x509-certificate-signing-request-builder-subject)
+(define x509-csr-builder-attributes
+  x509-certificate-signing-request-builder-attributes)
+(define x509-csr-builder-sa-retriever
+  x509-certificate-signing-request-builder-signature-algorithm-retriever)
+
+(define (x509-certificate-signing-request-builder:build builder)
+  (unless (x509-certificate-signing-request-builder? builder)
+    (springkussen-assertion-violation
+     'x509-certificate-signing-request-builder:build
+     "X509 CSR builder is required" builder))
+  (let* ((kp (x509-csr-builder-key-pair builder))
+	 (ctr (x509-csr-builder-sa-retriever builder))
+	 (cri (make-x509-certification-request-info
+	       (make-der-integer 0) ;; Only 0 is defined...
+	       (x509-csr-builder-subject builder)
+	       (public-key->subject-public-key-info (key-pair-public kp))
+	       (x509-csr-builder-attributes builder)))
+	 (signing-content (asn1-object->bytevector cri))
+	 (private-key (key-pair-private kp))
+	 (sa (ctr private-key))
+	 (signer ((signature-algorithm->signer-creator sa) private-key))
+	 (sig (signer:sign-message signer signing-content)))
+    (make-x509-certificate-signing-request 
+     (make-x509-certification-request cri sa (make-der-bit-string sig)))))
+   
+
 ;; Misc
 (define describe-x509-certificate
   (case-lambda
