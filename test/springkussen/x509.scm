@@ -1,5 +1,6 @@
 #!r6rs
 (import (rnrs)
+	(springkussen asn1)
 	(springkussen misc base64)
 	(springkussen signature)
 	(springkussen x509)
@@ -105,6 +106,8 @@
     "YF5PPxAO+0yKGqkl8PepvymXBrMAeszlHaRFXeRojXVALw==")))
 (test-assert "ECDSA public key"
 	     (ecdsa-public-key? (x509-certificate:public-key ec-cert)))
+(test-assert (x509-certificate:validate ec-cert
+	      (list (make-x509-signature-validator root-cert))))
 
 (define csr-string
   (string-append
@@ -138,5 +141,28 @@
   (test-assert (x509-certificate? c))
   (test-assert (x509-certificate:validate c
 		(list (make-x509-signature-validator ca-cert)))))
+
+(let* ((extensions (x509-extensions
+		    (make-x509-authority-key-identifier-extension
+		     (make-x509-authority-key-identifier
+		      #vu8(1 2 3 4 5)
+		      (x509-general-names
+		       (other-name->x509-general-name "1.2.3.4"
+		        (make-der-octet-string (string->utf8 "other name")))
+		       (rfc822-name->x509-general-name "rfc822-name")
+		       (dns-name->x509-general-name "dns-name")
+		       (directory-name->x509-general-name '(C "NL"))
+		       (ip-address->x509-general-name #vu8(1 2 3 4))
+		       (registered-id->x509-general-name "2.3.4.5"))
+		     101))))
+       (c (x509-certificate-signing-request:sign csr 100 validity
+						 ca-cert ca-priv-key
+						 extensions)))
+  (test-assert (x509-certificate? c))
+  (test-equal 3 (x509-certificate:version c))
+  (let ((extensions (x509-certificate:extensions c)))
+    (test-equal 1 (x509-extensions-length extensions))
+    (let ((e (x509-extensions-elements extensions)))
+      (test-assert (x509-authority-key-identifier-extension? (car e))))))
 
 (test-end)

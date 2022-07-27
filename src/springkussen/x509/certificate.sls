@@ -68,7 +68,8 @@
 	    (springkussen conditions)
 	    (springkussen digest)
 	    (springkussen signature)
-	    (springkussen x509 types))
+	    (springkussen x509 types)
+	    (springkussen x509 extensions))
 
 (define-record-type x509-validity
   (parent <asn1-encodable-object>)
@@ -154,7 +155,9 @@
 		  ((n tbs-certificate->asn1-object)
 		   sequence version serial-number signature
 		   issuer validity subject subject-public-key-info
-		   issuer-unique-id subject-unique-id extensions))))
+		   issuer-unique-id subject-unique-id
+		   (and extensions
+			(x509-extensions->standard-extensions extensions))))))
 	      make-tbs-cert)))
 (define (tbs-certificate->asn1-object self)
   (define (->tag-object tag-no obj explicit?)
@@ -325,7 +328,7 @@
   (define c (x509-certificate-c cert))
   (define tbs (x509-certificate-structure-tbs-certificate c))
   (define v (x509-tbs-certificate-version tbs))
-  (or (and v (+ (der-integer-value v)) 1) 1))
+  (or (and v (+ (der-integer-value v) 1)) 1))
 
 (define (x509-certificate:serial-number cert)
   (define c (x509-certificate-c cert))

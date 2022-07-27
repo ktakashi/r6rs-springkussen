@@ -66,15 +66,46 @@
 	    x509-attribute-type x509-attribute-values
 	    x509-attribute->asn1-object
 
+	    ;; Extensions
+	    make-x509-extensions x509-extensions? x509-extensions
+	    x509-extensions-length x509-extensions-elements
+
+	    make-x509-authority-key-identifier-extension
+	    x509-authority-key-identifier-extension?
+	    
+	    make-x509-general-names x509-general-names? x509-general-names
+
+	    x509-general-name?
+	    other-name->x509-general-name
+	    rfc822-name->x509-general-name
+	    dns-name->x509-general-name
+	    directory-name->x509-general-name
+	    uniform-resource-identifier->x509-general-name
+	    ip-address->x509-general-name
+	    registered-id->x509-general-name
+	    
+	    make-x509-authority-key-identifier x509-authority-key-identifier?
+	    x509-authority-key-identifier-key-identifier
+	    x509-authority-key-identifier-authority-cert-issuer
+	    x509-authority-key-identifier-serial-number
+	    
 	    describe-x509-certificate)
     (import (rnrs)
 	    (springkussen asn1)
 	    (springkussen conditions)
 	    (springkussen misc bytevectors)
 	    (springkussen x509 types)
+	    (springkussen x509 extensions)
 	    (springkussen x509 certificate)
 	    (springkussen x509 request))
 
+(define (x509-extensions . e*) (make-x509-extensions e*))
+(define (x509-general-names . gn*) (make-x509-general-names gn*))
+
+(define (x509-extensions-length e)
+  (length (asn1-collection-elements e)))
+(define (x509-extensions-elements e) (asn1-collection-elements e))
+  
 (define (%make-x509-validity not-before not-after)
   (make-x509-validity
    (make-x509-time (make-der-utc-time not-before))
@@ -130,5 +161,6 @@
   (ps (bytevector->hex-string (x509-certificate:signature cert))) (nl)
   (let ((extensions (x509-certificate:extensions cert)))
     (when extensions
-      (ps "  [3]      Extensions: ") (describe-asn1-object extensions out 11))))
+      (pl "  [3]      Extensions: ")
+      (describe-x509-extensions extensions out 11))))
 )

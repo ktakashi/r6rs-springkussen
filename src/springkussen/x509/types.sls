@@ -43,12 +43,14 @@
 	    make-x509-name x509-name?
 	    x509-name->asn1-object asn1-object->x509-name
 	    x509-name->list list->x509-name
+	    asn1-object->x509-name
+	    x509-name->string
 
 	    make-x509-time x509-time? x509-time-value
 	    x509-time:date-value
 	    
 	    make-x509-extension x509-extension?
-	    (rename (x509-extension <x509-extension>)) ;; for later
+	    (rename (x509-extension <x509-extension>))
 	    x509-extension-id x509-extension-critical? x509-extension-value
 	    x509-extension->asn1-object asn1-object->x509-extension
 
@@ -153,6 +155,16 @@
 		     (else (car e)))))
       (der-set (der-sequence (make-der-object-identifier oid) v))))
   (make-x509-name (map make-rdn (map ->rdn lis))))
+
+(define (x509-name->string x509-name)
+  (let-values (((out e) (open-string-output-port)))
+    (do ((lis (x509-name->list x509-name) (cdr lis)) (first? #t #f))
+	((null? lis) (e))
+      (let* ((e (car lis))
+	     (a (car e))
+	     (v (cadr e)))
+	(unless first? (put-string out ", "))
+	(put-datum out a) (put-char out #\=) (put-datum out v)))))
 
 (define-record-type x509-time
   (parent <asn1-encodable-object>)
