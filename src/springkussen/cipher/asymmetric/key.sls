@@ -53,7 +53,8 @@
 	    define-key-parameter
 	    )
     (import (rnrs)
-	    (springkussen cipher key))
+	    (springkussen cipher key)
+	    (springkussen conditions))
 
 (define-record-type asymmetric-key 
   (parent <key>))
@@ -80,8 +81,14 @@
 (define (asymmetric-key:export-key operation key)
   ((asymmetric-key-operation-exporter operation) key))
 
-(define (key-pair-factory:generate-key-pair kpf parameter)
-  ((key-pair-factory-key-pair-generator kpf) parameter))
+(define key-pair-factory:generate-key-pair
+  (case-lambda
+   ((kpf) (key-pair-factory:generate-key-pair kpf #f))
+   ((kpf parameter)
+    (unless (key-pair-factory? kpf)
+      (springkussen-assertion-violation 'key-pair-factory:generate-key-pair
+					"Key pair factory is required" kpf))
+    ((key-pair-factory-key-pair-generator kpf) parameter))))
 
 ;; Temporary solution
 (define-syntax define-key-parameter (make-define-key-parameter))

@@ -56,6 +56,8 @@
 	    asymmetric-key:import-key
 	    asymmetric-key:export-key
 	    asymmetric-key-operation?
+
+	    signature:export-asymmetric-key
 	    
 	    key-pair? key-pair-private key-pair-public
 	    private-key? public-key?
@@ -165,6 +167,20 @@
 	    (springkussen signature parameters)
 	    (springkussen signature rsa)
 	    (springkussen signature ecdsa))
+
+;; utility
+;; Import should also be possible by checking the 
+;; ASN1 structure, but that's a bit more trouble, so we don't do, yet
+(define (signature:export-asymmetric-key key)
+  (define key-operation 
+    (cond ((rsa-public-key? key) *public-key-operation:rsa*)
+	  ((rsa-private-key? key) *private-key-operation:rsa*)
+	  ((ecdsa-public-key? key) *ecdsa-public-key-operation*)
+	  ((ecdsa-private-key? key) *ecdsa-private-key-operation*)
+	  (else (springkussen-assertion-violation 'signature:export-key
+						  "Unknown key" key))))
+  (asymmetric-key:export-key key-operation key))
+
 
 
 (define (signer:sign-message signer message)

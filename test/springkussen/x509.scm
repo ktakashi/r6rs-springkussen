@@ -165,4 +165,23 @@
     (let ((e (x509-extensions-elements extensions)))
       (test-assert (x509-authority-key-identifier-extension? (car e))))))
 
+(let ((rsa-kp (key-pair-factory:generate-key-pair *key-pair-factory:rsa*))
+      (ecdsa-kp (key-pair-factory:generate-key-pair *key-pair-factory:ecdsa*
+		 (make-ecdsa-ec-parameter *ec-parameter:p192*)))
+      (subject (make-x509-distinguished-names '(C "NL") '(CN "Springkussen"))))
+  (let ((rsa-c (make-x509-self-signed-certificate rsa-kp 102 subject validity))
+	(ecdsa-c (make-x509-self-signed-certificate
+		  ecdsa-kp 102 subject validity
+		  (x509-extensions
+		   (make-x509-authority-key-identifier-extension
+		    (make-x509-authority-key-identifier #vu8(1 2 3 4 6)))))))
+    (test-assert (x509-certificate? rsa-c))
+    (test-assert 1 (x509-certificate:version rsa-c))
+    (test-assert (x509-certificate:validate rsa-c
+		  (list (make-x509-signature-validator rsa-c))))
+    (test-assert (x509-certificate? ecdsa-c))
+    (test-assert 3 (x509-certificate:version ecdsa-c))
+    (test-assert (x509-certificate:validate ecdsa-c
+		  (list (make-x509-signature-validator ecdsa-c))))))
+  
 (test-end)

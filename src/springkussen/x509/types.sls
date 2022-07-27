@@ -37,6 +37,8 @@
 	    make-subject-public-key-info subject-public-key-info?
 	    asn1-object->subject-public-key-info ;; useful?
 	    subject-public-key-info->public-key
+	    bytevector->subject-public-key-info
+	    public-key->subject-public-key-info
 	    
 	    make-rdn rdn? rdn-values
 
@@ -286,6 +288,12 @@
     (make-subject-public-key-info
      (asn1-object->algorithm-identifier (car e))
      (cadr e))))
+(define (bytevector->subject-public-key-info bv)
+  (asn1-object->subject-public-key-info
+   (bytevector->asn1-object bv)))
+(define (public-key->subject-public-key-info public-key)
+  (bytevector->subject-public-key-info
+   (signature:export-asymmetric-key public-key)))
 
 (define *spki-oids*
   `(("1.2.840.113549.1.1.1"  . ,*public-key-operation:rsa*)

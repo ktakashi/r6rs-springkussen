@@ -50,8 +50,10 @@
 	    x509-certificate:validate
 	    make-x509-signature-validator
 
-	    (rename (%make-x509-validity make-x509-validity))
-	    x509-validity?
+	    make-x509-validity x509-validity?
+	    make-x509-distinguished-names
+
+	    make-x509-self-signed-certificate
 
 	    ;; CSR
 	    make-x509-certificate-signing-request
@@ -94,9 +96,11 @@
 	    (springkussen asn1)
 	    (springkussen conditions)
 	    (springkussen misc bytevectors)
+	    (springkussen signature)
 	    (springkussen x509 types)
 	    (springkussen x509 extensions)
-	    (springkussen x509 certificate)
+	    (rename (springkussen x509 certificate)
+		    (make-x509-validity c:make-x509-validity))
 	    (springkussen x509 request))
 
 (define (x509-extensions . e*) (make-x509-extensions e*))
@@ -105,12 +109,61 @@
 (define (x509-extensions-length e)
   (length (asn1-collection-elements e)))
 (define (x509-extensions-elements e) (asn1-collection-elements e))
-  
-(define (%make-x509-validity not-before not-after)
-  (make-x509-validity
+
+(define (make-x509-validity not-before not-after)
+  (c:make-x509-validity
    (make-x509-time (make-der-utc-time not-before))
    (make-x509-time (make-der-utc-time not-after))))
 
+(define (make-x509-distinguished-names . n) (list->x509-name n))
+
+(define make-x509-self-signed-certificate
+  (case-lambda
+   ((key-pair sn subject validity)
+    (make-x509-self-signed-certificate key-pair sn subject validity #f))
+   ((key-pair sn subject validity extensions)
+    (define (make-tbs sn signature subject validity public-key extensions)
+      (define version (and extensions (make-der-integer 2)))
+      (make-x509-tbs-certificate
+       #f
+       version
+       (make-der-integer sn)
+       signature
+       subject
+       validity
+       subject
+       (public-key->subject-public-key-info public-key)
+       #f
+       #f
+       extensions))
+    (unless (integer? sn)
+      (springkussen-assertion-violation 'make-x509-self-signed-certificate
+					"Integer is requried" sn))
+    (unless (key-pair? key-pair)
+      (springkussen-assertion-violation 'make-x509-self-signed-certificate
+					"Key pair is requried" key-pair))
+    (unless (x509-name? subject)
+      (springkussen-assertion-violation 'make-x509-self-signed-certificate
+					"X509 name is required for subject"
+					subject))
+    (unless (x509-validity? validity)
+      (springkussen-assertion-violation 'make-x509-self-signed-certificate
+					"X509 validity is required"
+					validity))
+    (unless (or (not extensions) (x509-extensions? extensions))
+      (springkussen-assertion-violation 'make-x509-self-signed-certificate
+					"X509 extensions is required"
+					extensions))
+    (let-values (((signer sa)
+		  (private-key->x509-signer&signature-algorihtm
+		   (key-pair-private key-pair))))
+      (let* ((tbs (make-tbs sn sa subject validity
+			    (key-pair-public key-pair) extensions))
+	     (signing-content (asn1-object->bytevector tbs))
+	     (sig (signer:sign-message signer signing-content)))
+	(make-x509-certificate
+	 (make-x509-certificate-structure
+	  tbs sa (make-der-bit-string sig) #f)))))))
 ;; Misc
 (define describe-x509-certificate
   (case-lambda
