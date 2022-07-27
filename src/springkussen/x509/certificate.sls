@@ -69,7 +69,8 @@
 	    (springkussen digest)
 	    (springkussen signature)
 	    (springkussen x509 types)
-	    (springkussen x509 extensions))
+	    (springkussen x509 extensions)
+	    (springkussen x509 signature))
 
 (define-record-type x509-validity
   (parent <asn1-encodable-object>)
@@ -421,25 +422,15 @@
   (define public-key (x509-certificate:public-key ca-cert))
   (lambda (cert)
     (define c (x509-certificate-c cert))
-    (define signature-algorithm
-      (x509-certificate-structure-signature-algorithm c))
+    (define verifier
+      ((signature-algorithm->verifier-creator
+	(x509-certificate-structure-signature-algorithm c)) public-key))
     (define signature (x509-certificate-structure-signature c))
-    (define oid (algorithm-identifier-algorithm signature-algorithm))
     (define message (asn1-object->bytevector
 		     (or (and (x509-certificate-structure-sequence c)
 			      (car (asn1-collection-elements
 				    (x509-certificate-structure-sequence c))))
 			 (x509-certificate-structure-tbs-certificate c))))
-    
-    (cond ((assoc (der-object-identifier-value oid) *oid-verifier-parameter*) =>
-	   (lambda (slot)
-	     (define desc (cadr slot))
-	     (define param (caddr slot))
-	     (let ((verifier (make-verifier desc public-key param)))
-	       (verifier:verify-signature verifier message
-					  (der-bit-string-value signature)))))
-	  (else
-	   (springkussen-error 'signature-validator
-			       "Unknown signature OID"
-			       (der-object-identifier-value oid))))))
+    (verifier:verify-signature verifier message 
+			       (der-bit-string-value signature))))
 )

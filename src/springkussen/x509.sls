@@ -101,7 +101,8 @@
 	    (springkussen x509 extensions)
 	    (rename (springkussen x509 certificate)
 		    (make-x509-validity c:make-x509-validity))
-	    (springkussen x509 request))
+	    (springkussen x509 request)
+	    (springkussen x509 signature))
 
 (define (x509-extensions . e*) (make-x509-extensions e*))
 (define (x509-general-names . gn*) (make-x509-general-names gn*))
@@ -154,16 +155,16 @@
       (springkussen-assertion-violation 'make-x509-self-signed-certificate
 					"X509 extensions is required"
 					extensions))
-    (let-values (((signer sa)
-		  (private-key->x509-signer&signature-algorihtm
-		   (key-pair-private key-pair))))
-      (let* ((tbs (make-tbs sn sa subject validity
-			    (key-pair-public key-pair) extensions))
-	     (signing-content (asn1-object->bytevector tbs))
-	     (sig (signer:sign-message signer signing-content)))
-	(make-x509-certificate
-	 (make-x509-certificate-structure
-	  tbs sa (make-der-bit-string sig) #f)))))))
+    (let* ((private-key (key-pair-private key-pair))
+	   (sa (make-x509-default-signature-algorithm private-key))
+	   (signer ((signature-algorithm->signer-creator sa) private-key))
+	   (tbs (make-tbs sn sa subject validity
+			  (key-pair-public key-pair) extensions))
+	   (signing-content (asn1-object->bytevector tbs))
+	   (sig (signer:sign-message signer signing-content)))
+      (make-x509-certificate
+       (make-x509-certificate-structure
+	tbs sa (make-der-bit-string sig) #f))))))
 ;; Misc
 (define describe-x509-certificate
   (case-lambda

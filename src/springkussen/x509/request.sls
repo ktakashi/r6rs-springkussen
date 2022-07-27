@@ -60,10 +60,7 @@
 	    x509-certification-request-signature-algorithm
 	    x509-certification-request-signature
 	    x509-certification-request->asn1-object
-	    asn1-object->x509-certification-request
-
-	    private-key->x509-signer&signature-algorihtm
-	    )
+	    asn1-object->x509-certification-request)
     (import (rnrs)
 	    (springkussen asn1)
 	    (springkussen conditions)
@@ -71,7 +68,8 @@
 	    (springkussen misc bytevectors)
 	    (springkussen signature)
 	    (springkussen x509 types)
-	    (springkussen x509 certificate))
+	    (springkussen x509 certificate)
+	    (springkussen x509 signature))
 
 (define-record-type x509-attribute
   (parent <asn1-encodable-object>)
@@ -255,15 +253,6 @@
    ((csr sn validity ca-cert private-key extensions)
     (sign-csr csr sn validity ca-cert private-key extensions))))
 
-(define digest-parameter (make-signature-digest-parameter *digest:sha256*))
-(define rsa-signer-parameter
-  (make-signature-parameter digest-parameter
-   ;; Should we use PSS?
-   (make-rsa-signature-encode-parameter pkcs1-emsa-v1.5-encode)))
-(define ecdsa-signer-parameter
-  (make-signature-parameter digest-parameter
-    (make-ecdsa-encode-parameter (ecdsa-signature-encode-type der))))
-
 (define (sign-csr csr sn validity ca-cert private-key extensions)
   (define (csr->tbs csr sn signature validity ca-cert extensions)
     (define version (and extensions (make-der-integer 2)))
@@ -279,36 +268,14 @@
      #f
      #f
      extensions))
-  (let-values (((signer signature)
-		(private-key->x509-signer&signature-algorihtm private-key)))
-    (let* ((tbs (csr->tbs csr sn signature validity ca-cert extensions))
-	   (signing-content (asn1-object->bytevector tbs))
-	   (sig (signer:sign-message signer signing-content)))
-      (make-x509-certificate
-       (make-x509-certificate-structure
-	tbs signature (make-der-bit-string sig) #f)))))
-
-;; misc
-(define (private-key->x509-signer&signature-algorihtm private-key)
-  (define signature
-    (make-algorithm-identifier
-     (make-der-object-identifier
-      (cond ((rsa-private-key? private-key) "1.2.840.113549.1.1.11")
-	    ((ecdsa-private-key? private-key) "1.2.840.10045.4.3.2")
-	    (else
-	     (springkussen-assertion-violation
-	      'private-key->x509-signer&signature-algorihtm
-	      "Unknown private key type"))))
-     (make-der-null)))
-  (define (get-signer private-key)
-    (cond ((rsa-private-key? private-key)
-	   (make-signer *signer:rsa* private-key rsa-signer-parameter))
-	  ((ecdsa-private-key? private-key)
-	   (make-signer *signer:ecdsa* private-key ecdsa-signer-parameter))
-	  (else
-	   (springkussen-assertion-violation
-	    'private-key->x509-signer&signature-algorihtm
-	    "Unknown private key type"))))
-  (values (get-signer private-key) signature))
-
+  (define signature-algorithm
+    (make-x509-default-signature-algorithm private-key))
+  (define signer
+    ((signature-algorithm->signer-creator signature-algorithm) private-key))
+  (let* ((tbs (csr->tbs csr sn signature-algorithm validity ca-cert extensions))
+	 (signing-content (asn1-object->bytevector tbs))
+	 (sig (signer:sign-message signer signing-content)))
+    (make-x509-certificate
+     (make-x509-certificate-structure
+      tbs signature-algorithm (make-der-bit-string sig) #f))))
 )
