@@ -24,6 +24,9 @@
 (test-assert (asymmetric-key-operation? *public-key-operation:rsa*))
 (test-assert (asymmetric-key-operation? *private-key-operation:rsa*))
 
+(test-assert (cipher-parameter? (make-label-encoding-parameter #vu8(1))))
+(test-assert (encoding-parameter? (make-label-encoding-parameter #vu8(1))))
+
 (define test-asymmetric-ciper
   (case-lambda
    ((pt ct spec pub-key priv-key)

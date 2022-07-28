@@ -79,6 +79,7 @@
 	    
 	    pkcs1-v1.5-encoding oaep-encoding
 
+	    encoding-parameter?
 	    make-cipher-parameter cipher-parameter?
 	    random-generator-encoding-parameter?
 	    make-random-generator-encoding-parameter

@@ -71,6 +71,14 @@ _field_ must be one of the followings
 - `scheme`: Encryption scheme, **required**
 - `encoding`: Padding scheme, optional, default `pkcs1-v1.5-encoding`
 
+###### [Padding scheme] `pkcs1-v1.5-encoding`
+
+PKCS#1 v1.5 encoding
+
+###### [Padding scheme] `oaep-encoding`
+
+OAEP encoding, for new applications, this should be used.
+
 ###### [Procedure] `asymmetric-cipher?` _obj_
 
 Returns `#t` if the given _obj_ is a asymmetric cipher object.
@@ -95,6 +103,69 @@ Encrypts / decrypts given _bv_ with given _cipher_, respectively.
 In this library, it doesn't check if encryption happens with public key
 or not. So, it is users responsibility to make sure to choose the
 appropriate key for the operation.
+
+### Cipher parameter
+
+###### [Procedure] `make-cipher-parameter` _param_ _..._
+###### [Procedure] `cipher-parameter?` _obj_
+
+Re-exported from `(springkussen cipher symmetric)`.  See the `Cipher
+parameter` section of [`(springkussen cipher symmetric)` - Symmetric
+cipher APIs](./symmetric.md).
+
+#### Encoding parameter
+
+Encoding parameter is a sub type of cipher parameter.
+
+###### [Procedure] `encoding-parameter?` _obj_
+
+Returns `#t` if the given _obj_ is an encoding parameter, otherwise `#f`.
+
+###### [Procedure] `random-generator-encoding-parameter?` _obj_
+
+Returns `#t` if the given _obj_ is an random generator encoding parameter,
+otherwise `#f`.
+
+###### [Procedure] `make-random-generator-encoding-parameter` _random-generator_
+
+_random-generator_ must be a random generator.
+
+Makes a random generator encoding parameter. This parameter can be used
+for both `oaep-encoding` and `pkcs1-v1.5-encoding`.
+
+###### [Procedure] `digest-encoding-parameter?` _obj_
+
+Returns `#t` if the given _obj_ is a digest encoding parameter, otherwise `#f`.
+
+###### [Procedure] `make-digest-encoding-parameter` _descriptor_
+
+_descriptor_ must be a digest descriptor.
+
+Makes a digest encoding parameter. This parameter can be used for 
+`oaep-encoding`
+
+###### [Procedure] `mgf-digest-encoding-parameter?` _obj_
+
+Returns `#t` if the given _obj_ is a MGF digest encoding parameter,
+otherwise `#f`.
+
+###### [Procedure] `make-mgf-digest-encoding-parameter` _descriptor_
+
+_descriptor_ must be a digest descriptor.
+
+Makes a MGF digest encoding parameter. This parameter can be used for 
+`oaep-encoding`. This parameter controls MGF digest.
+
+###### [Procedure] `label-encoding-parameter?` _obj_
+
+Returns `#t` if the given _obj_ is a label encoding parameter, otherwise `#f`.
+
+###### [Procedure] `make-label-encoding-parameter` _label_
+
+_label_ must be a bytevector represents OAEP encoding label.
+
+Makes a label encoding parameter. This parameter can be used for 
+`oaep-encoding`. This parameter controls label of OAPE encoding.
 
 
 Encryption scheme
@@ -142,6 +213,11 @@ _asymmetric-key_ must be an asymmetric key.
 
 Exports the given _asymmetric-key_ as a bytevector via the _key-operation_.
 
+###### [Key operation] `*public-key-operation:rsa*`
+###### [Key operation] `*private-key-operation:rsa*`
+
+RSA Public key and private key operations, respectively.
+
 ###### [Procedure] `key-factory?` _obj_
 
 Returns `#t` if the given _obj_ is a key factory object, otherwise `#f`.
@@ -161,12 +237,14 @@ Key factory object for RSA.
 
 Returns `#t` if the given _obj_ is a key pair factory object, otherwise `#f`.
 
+###### [Procedure] `key-pair-factory:generate-key` _kpf_
 ###### [Procedure] `key-pair-factory:generate-key` _kpf_ _key-parameter_
 
 _kpf_ must be a key pair factory object.  
-_key-parameter_ must be a key parameter object.
+_key-parameter_ must be a key parameter object if the second form is used.
 
-Generates a key pair according to the given _key-parameter_ via the _kpf_.
+Generates a key pair according to the given _key-parameter_ via the _kpf_.  
+If the first form is used, then it tries to generate a default key pair.
 
 ###### [Key pair factory] `*key-pair-factory:rsa*`
 
@@ -196,3 +274,103 @@ Returns `#t` if the given _obj_ is a private key, otherwise `#f`.
 
 Returns `#t` if the given _obj_ is a public key, otherwise `#f`.
 
+###### [Procedure] `rsa-private-key?` _obj_
+
+Returns `#t` if the given _obj_ is a RSA private key, otherwise `#f`.
+
+###### [Procedure] `rsa-public-key?` _obj_
+
+Returns `#t` if the given _obj_ is a RSA public key, otherwise `#f`.
+
+### Key parameters
+
+Key parameters specify key specification. For example, modulus of RSA
+public key or key length of a generating key. Both key factory and key
+pair factory uses the same type, and if the wrong parameter is
+specified for a factory, the parameter will be ignored.
+
+###### [Procedure] `key-parameter?` _obj_
+
+Returns `#t` if the given _obj_ is a key parameter, otherwise `#f`.
+
+###### [Procedure] `rsa-public-key-parameter?` _obj_
+
+Returns `#t` if the given _obj_ is a RSA public key parameter, otherwise `#f`.
+
+###### [Procedure] `make-rsa-public-key-parameter` _modulus_ _exponent_
+
+_modulus_ must be an integer represents a RSA modulus.  
+_exponent_ must be an integer represents a RSA public exponent.
+
+Makes a RSA public key parameter.
+
+###### [Procedure] `rsa-private-key-parameter?` _obj_
+
+Returns `#t` if the given _obj_ is a RSA private key parameter, otherwise `#f`.
+
+###### [Procedure] `make-rsa-private-key-parameter` _modulus_ _private-exponent_
+
+_modulus_ must be an integer represents a RSA modulus.  
+_private-exponent_ must be an integer represents a RSA private exponent.
+
+Makes a RSA private key parameter.
+
+###### [Procedure] `rsa-crt-private-key-parameter?` _obj_
+
+Returns `#t` if the given _obj_ is a RSA CRT private key parameter,
+otherwise `#f`.
+
+###### [Procedure] `make-rsa-crt-private-key-parameter` _modulus_ _private-exponent_ _public-exponent_ _p_ _q_ _dP_ _dQ_ _qP_
+
+_modulus_  must be an integer represents a RSA modulus.  
+_private-exponent_ must be an integer represents a RSA private exponent.  
+_public-exponent_  must be an integer represents a RSA public exponent.  
+_p_ must be an integer of prime number.  
+_q_ must be an integer of prime number.  
+_dP_ must be an integer.  
+_dQ_ must ba an integer.  
+_qP_ must ben an integer.  
+
+Makes a RSA CRT private key parameter. The parameter doesn't check the
+validity of the arguments. It is users' responsibility to make sure
+all the arguments satisfy the below equation:
+
+```math
+modulus = p * q
+private-exponent = e^-1 mod (p - 1) * (q - 1)
+dP = private-exponent mod (p - 1)
+qP = private-exponent mod (q - 1)
+qP = q^-1 mod p
+```
+
+###### [Procedure] `random-generator-key-parameter?` _obj_
+
+Returns `#t` if the given _obj_ is a random generator key parameter,
+otherwise `#f`.
+
+###### [Procedure] `make-random-generator-key-parameter` _random-generator_
+
+_random-generator_ must be a random generator.
+
+Makes a random generator key parameter.
+
+###### [Procedure] `key-size-key-parameter?` _obj_
+
+Returns `#t` if the given _obj_ is a key size key parameter, otherwise `#f`.
+
+###### [Procedure] `make-key-size-key-parameter` _size_
+
+_size_ must be an integer.
+
+Makes a key size key parameter.
+
+###### [Procedure] `public-exponent-key-parameter?` _obj_
+
+Returns `#t` if the given _obj_ is a public exponent key parameter,
+otherwise `#f`.
+
+###### [Procedure] `make-public-exponent-key-parameter` _exponent_
+
+_exponent_ must be an integer.
+
+Makes a public exponent key parameter.
