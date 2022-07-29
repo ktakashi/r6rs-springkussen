@@ -51,18 +51,20 @@
 	    make-x509-signature-validator
 
 	    make-x509-validity x509-validity?
+	    x509-name?
 	    make-x509-distinguished-names
 
 	    make-x509-self-signed-certificate
 
 	    ;; CSR
-	    make-x509-certificate-signing-request
 	    x509-certificate-signing-request?
 	    x509-certificate-signing-request:subject
 	    x509-certificate-signing-request:subject-pk-info
 	    x509-certificate-signing-request:sign
 	    read-x509-certificate-signing-request
 	    bytevector->x509-certificate-signing-request
+	    write-x509-certificate-signing-request
+	    x509-certificate-signing-request->bytevector
 
 	    x509-certificate-signing-request-builder?
 	    x509-certificate-signing-request-builder-builder
@@ -75,12 +77,13 @@
 	    make-x509-challenge-password-attribute
 	    x509-challenge-password-attribute?
 	    make-x509-extension-request-attribute
-	    x509-extension-request-attribute
+	    x509-extension-request-attribute?
 
 	    ;; Extensions
 	    make-x509-extensions x509-extensions? x509-extensions
 	    x509-extensions-length x509-extensions-elements
 
+	    x509-extension?
 	    make-x509-authority-key-identifier-extension
 	    x509-authority-key-identifier-extension?
 	    

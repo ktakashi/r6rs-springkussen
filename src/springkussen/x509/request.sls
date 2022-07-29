@@ -38,7 +38,9 @@
 	    x509-certificate-signing-request:sign
 	    read-x509-certificate-signing-request
 	    bytevector->x509-certificate-signing-request
-
+	    write-x509-certificate-signing-request
+	    x509-certificate-signing-request->bytevector
+	    
 	    make-x509-attribute x509-attribute?
 	    x509-attribute-type x509-attribute-values
 	    x509-attribute->asn1-object
@@ -260,6 +262,16 @@
 
 (define (bytevector->x509-certificate-signing-request bv)
   (read-x509-certificate-signing-request (open-bytevector-input-port bv)))
+
+(define write-x509-certificate-signing-request
+  (case-lambda
+   ((csr) (write-x509-certificate-signing-request csr (current-output-port)))
+   ((csr out) (write-asn1-object csr out))))
+
+(define (x509-certificate-signing-request->bytevector csr)
+  (let-values (((out e) (open-bytevector-output-port)))
+    (write-x509-certificate-signing-request csr out)
+    (e)))
 
 
 (define (x509-certificate-signing-request:certification-request-info csr)

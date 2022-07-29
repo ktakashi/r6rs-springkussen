@@ -353,7 +353,11 @@
 (define (x509-certificate:validity cert)
   (define c (x509-certificate-c cert))
   (define tbs (x509-certificate-structure-tbs-certificate c))
-  (x509-tbs-certificate-validity tbs))
+  (define validity (x509-tbs-certificate-validity tbs))
+  (let ((not-before (x509-validity-not-before validity))
+	(not-after (x509-validity-not-after validity)))
+    (values (x509-time:date-value not-before)
+	    (x509-time:date-value not-after))))
 
 (define (x509-certificate:subject cert)
   (define c (x509-certificate-c cert))

@@ -151,7 +151,8 @@
 		        (make-der-octet-string (string->utf8 "other name")))
 		       (rfc822-name->x509-general-name "rfc822-name")
 		       (dns-name->x509-general-name "dns-name")
-		       (directory-name->x509-general-name '(C "NL"))
+		       (directory-name->x509-general-name 
+			(make-x509-distinguished-names '(C "NL")))
 		       (ip-address->x509-general-name #vu8(1 2 3 4))
 		       (registered-id->x509-general-name "2.3.4.5"))
 		     101))))

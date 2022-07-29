@@ -116,8 +116,7 @@
       ((0) (asn1-object->other-name-x509-general-name obj)) ;; other-name
       ((1) (der-string->general-name obj rfc822-name->x509-general-name))
       ((2) (der-string->general-name obj dns-name->x509-general-name))
-      ((4) (apply directory-name->x509-general-name
-		  (x509-name->list (asn1-object->x509-name obj))))
+      ((4) (directory-name->x509-general-name (asn1-object->x509-name obj)))
       ((6) (der-string->general-name obj
 	     uniform-resource-identifier->x509-general-name))
       ((7)
@@ -141,8 +140,11 @@
 (define (dns-name->x509-general-name s)
   (make-x509-general-name 2 (make-der-ia5-string s)))
 ;; no support for x400Address for now
-(define (directory-name->x509-general-name . names)
-  (make-x509-general-name 4 (list->x509-name names)))
+(define (directory-name->x509-general-name name)
+  (unless (x509-name? name) 
+    (springkussen-assertion-violation 'directory-name->x509-general-name
+				      "X.509 name required"))
+  (make-x509-general-name 4 name))
 ;; no ediPartyName for now
 (define (uniform-resource-identifier->x509-general-name s)
   (make-x509-general-name 6 (make-der-ia5-string s)))

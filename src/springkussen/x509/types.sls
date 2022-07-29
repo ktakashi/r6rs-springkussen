@@ -88,7 +88,7 @@
 (define *default-symbols*
   '(("2.5.4.3"                    . CN)
     ("2.5.4.4"                    . SURNAME)
-    ("2.5.4.5"                    . SERIALNUMER)
+    ("2.5.4.5"                    . SERIALNUMBER)
     ("2.5.4.6"                    . C)
     ("2.5.4.7"                    . L)
     ("2.5.4.8"                    . ST)
