@@ -111,7 +111,8 @@
 		     *public-key-operation:ecdsa*))
 
 	    make-random-k-generator
-
+	    make-k-generator-parameter k-generator-parameter?
+	    
 	    ecdsa-private-key?
 	    ecdsa-public-key?
 

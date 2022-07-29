@@ -34,6 +34,7 @@
 	    ecdsa-verifier-descriptor
 
 	    make-random-k-generator
+	    make-k-generator-parameter k-generator-parameter?
 
 	    ecdsa-private-key?
 	    ecdsa-private-key-d ecdsa-private-key-ec-parameter

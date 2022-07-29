@@ -21,5 +21,5 @@ Below is the list of libraries:
 - [`(springkussen digest)`](./digest.md): Digest APIs
 - [`(springkussen mac)`](./mac.md): MAC APIs
 - [`(springkussen random)`](./random.md): Secure random generator APIs
-
+- [`(springkussen signature)`](./signature.md): Signer and verifier APIs
 

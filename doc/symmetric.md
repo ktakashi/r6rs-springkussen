@@ -181,15 +181,17 @@ Encryption modes. The name implies which encryption mode it is.
 
 ### Cipher parameter
 
-Cipher parametetr is a compositable record, like condition on R6RS. 
-Ciphers should provide appropriate parameters and it is users
-responsibilty to choose parameters to be used.
+Cipher parametetr is a compositable record, like condition on R6RS.  
+Ciphers provide their parameters and it is users' responsibilty to
+choose parameters to be used.
 
 NOTE: Cipher parameter can also be used for asymmetric ciphers.
 
-###### [Procedure] `make-cipher-parameter` _param_ _..._
+###### [Procedure] `make-cipher-parameter` _parameter_ _..._
 
-Makes a composite cipher parameter from given *param*s.
+_parameter_ must be a cipher parameter.
+
+Makes a composite cipher parameter from given *parameter*s.
 
 ###### [Procedure] `cipher-parameter?` _obj_
 
