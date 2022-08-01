@@ -32,6 +32,7 @@
 (library (springkussen mac hmac)
     (export hmac-descriptor
 
+	    make-mac-key-parameter mac-key-parameter?
 	    make-hmac-parameter hmac-parameter?)
     (import (rnrs)
 	    (springkussen conditions)
@@ -126,9 +127,12 @@
 ;; Famous workaround...
 (define-syntax define-mac-parameter (make-define-mac-parameter))
 
-(define-mac-parameter <hmac-parameter>
+;; TODO move in case we support CMAC or other
+(define-mac-parameter <mac-key-parameter>
+  make-mac-key-parameter mac-key-parameter?
+  (key mac-parameter-key))
+(define-mac-parameter (<hmac-parameter> <mac-key-parameter>)
   make-hmac-parameter hmac-parameter?
-  (key mac-parameter-key)
   (digest mac-parameter-digest))
 
 (define hmac-descriptor

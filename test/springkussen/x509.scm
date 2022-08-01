@@ -208,3 +208,4 @@
 
 
 (test-end)
+(exit (zero? (test-runner-fail-count (test-runner-current))))
