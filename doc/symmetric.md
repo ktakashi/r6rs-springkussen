@@ -26,12 +26,10 @@ Below is an example to encrypt an arbitrary text with AES/CBC.
 (define key (make-symmetric-key #vu8(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15)))
 
 (define (encrypt-text key text)
-  ;; A cipher may not be reusable, if it holds a state, such as IV
   (let ((cipher (make-symmetric-cipher aes/cbc key cipher-mode-parameter)))
     (symmetric-cipher:encrypt-bytevector cipher (string->utf8 text))))
 
 (define (decrypt-text key bv)
-  ;; A cipher may not be reusable, if it holds a state, such as IV
   (let ((cipher (make-symmetric-cipher aes/cbc key cipher-mode-parameter)))
     (utf8->string (symmetric-cipher:decrypt-bytevector cipher bv))))
 
@@ -70,21 +68,23 @@ _field_ must be one of the followings
 
 Returns `#t` if the given _obj_ is a symmetric cipher object.
 
-###### [Procedure] `make-symmetric-cipher` _spec_ _symmetric-key_
-###### [Procedure] `make-symmetric-cipher` _spec_ _symmetric-key_ _parameter_
+###### [Procedure] `make-symmetric-cipher` _spec_
 
-_spec_ must be a symmetric cipher spec object.  
-_symmetric-key_ must be a symmetric key object.  
-_parameter_ must be a cipher parameter, if the second form is used.
+_spec_ must be a symmetric cipher spec object.
 
 Makes a symmetric cipher.
 
-NOTE: Most of the ciphers are stateful, such as CBC mode.
+High level cipher APIs
+----------------------
 
-###### [Procedure] `symmetric-cipher:encrypt-bytevector` _cipher_ _bv_
-###### [Procedure] `symmetric-cipher:decrypt-bytevector` _cipher_ _bv_
+###### [Procedure] `symmetric-cipher:encrypt-bytevector` _cipher_ _symmetric-key_ _bv_
+###### [Procedure] `symmetric-cipher:encrypt-bytevector` _cipher_ _symmetric-key_ _parameter_ _bv_
+###### [Procedure] `symmetric-cipher:decrypt-bytevector` _cipher_ _symmetric-key_ _bv_
+###### [Procedure] `symmetric-cipher:decrypt-bytevector` _cipher_ _symmetric-key_ _parameter_ _bv_
 
 _cipher_ must be a symmetric cipher object.  
+_symmetric-key_ must be a symmetric key object.  
+_parameter_ must be a cipher parameter, if the second form is used.
 _bv_ must be a bytevector.
 
 Encrypts / decrypts given _bv_ with given _cipher_, respectively.

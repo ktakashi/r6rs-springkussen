@@ -7,14 +7,12 @@
 (test-begin "Symmetric cipher APIs")
 
 (define (test-encrypt/decrypt cipher-spec key pt . opt)
-  ;; If the cipher is ECB, we don't have to
-  ;; but if it's CBC, then we need to make 2 ciphers
-  (define enc-cipher (apply make-symmetric-cipher cipher-spec key opt))
-  (define dec-cipher (apply make-symmetric-cipher cipher-spec key opt))
-  (let ((ct (symmetric-cipher:encrypt-bytevector enc-cipher pt)))
+  (define param (and (not (null? opt)) (car opt)))
+  (define cipher (make-symmetric-cipher cipher-spec))
+  (let ((ct (symmetric-cipher:encrypt-bytevector cipher key param pt)))
     (test-assert "Plain text != cipher text" (not (bytevector=? pt ct)))
     (test-equal "Decrypt"
-		pt (symmetric-cipher:decrypt-bytevector dec-cipher ct))))
+		pt (symmetric-cipher:decrypt-bytevector cipher key param ct))))
 
 (test-assert (symmetric-cipher-spec?
 	      (symmetric-cipher-spec-builder (scheme *scheme:aes*)
@@ -68,10 +66,10 @@
 	 (param (make-iv-paramater iv))
 	 (pt #vu8(1 2 3 4 5 6 7 8 9 10)))
     (let ((enc0 (symmetric-cipher:encrypt-bytevector
-		 (make-symmetric-cipher aes-cbc-cipher-spec key param) pt)))
+		 (make-symmetric-cipher aes-cbc-cipher-spec) key param pt)))
       (bytevector-u8-set! iv 0 1)
       (let ((enc1 (symmetric-cipher:encrypt-bytevector
-		   (make-symmetric-cipher aes-cbc-cipher-spec key param) pt)))
+		   (make-symmetric-cipher aes-cbc-cipher-spec) key param pt)))
 	(test-equal enc0 enc1))))
   )
 
@@ -92,16 +90,14 @@
 
   ;; AES uses key size of 16 bytes to 32 bytes, but here we use 16
   (define key (make-symmetric-key #vu8(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15)))
-
+  (define cipher (make-symmetric-cipher aes/cbc))
   (define (encrypt-text key text)
-    ;; A cipher may not be reusable, if it holds a state, such as IV
-    (let ((cipher (make-symmetric-cipher aes/cbc key cipher-mode-parameter)))
-      (symmetric-cipher:encrypt-bytevector cipher (string->utf8 text))))
+    (symmetric-cipher:encrypt-bytevector cipher key cipher-mode-parameter
+					 (string->utf8 text)))
 
   (define (decrypt-text key bv)
-    ;; A cipher may not be reusable, if it holds a state, such as IV
-    (let ((cipher (make-symmetric-cipher aes/cbc key cipher-mode-parameter)))
-      (utf8->string (symmetric-cipher:decrypt-bytevector cipher bv))))
+    (utf8->string
+     (symmetric-cipher:decrypt-bytevector cipher key cipher-mode-parameter bv)))
 
   (let ((text "Jumping on Springkussen"))
     (test-equal text (decrypt-text key (encrypt-text key text)))))

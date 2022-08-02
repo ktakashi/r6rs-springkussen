@@ -30,7 +30,8 @@
 
 #!r6rs
 (library (springkussen misc bytevectors)
-    (export bytevector-append bytevector-xor bytevector-xor!
+    (export sub-bytevector
+	    bytevector-append bytevector-xor bytevector-xor!
 	    bytevector->uinteger uinteger->bytevector
 	    bytevector->sinteger sinteger->bytevector
 	    bytevector-safe=?
@@ -38,6 +39,14 @@
 	    bytevector->hex-string
 	    )
     (import (rnrs))
+
+(define sub-bytevector
+  (case-lambda
+   ((bv start) (sub-bytevector bv 0 (bytevector-length bv)))
+   ((bv start end)
+    (let ((r (make-bytevector (- end start))))
+      (bytevector-copy! bv start r 0 (- end start))
+      r))))
 
 (define (bytevector-append . bv*)
   (define size
