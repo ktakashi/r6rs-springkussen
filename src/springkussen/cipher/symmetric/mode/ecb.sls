@@ -75,7 +75,7 @@
 
   (unless (zero? (mod ct-len blocklen))
     (springkussen-assertion-violation 'decrypt "invalid argument"))
-  (unless (= ct-len (- (bytevector-length pt) ps))
+  (when (< (- (bytevector-length pt) ps) ct-len)
     (springkussen-assertion-violation 'decrypt "invalid argument"))
   (let ((key (symmetric-ecb-key ecb)))
     (let loop ((i 0))

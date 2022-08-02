@@ -38,14 +38,47 @@
 	    pbe-scheme-descriptor:done
 	    pbe-scheme-descriptor:encrypt
 	    pbe-scheme-descriptor:decrypt
+
+	    make-pbe-cipher-encryption-parameter
+	    pbe-cipher-encryption-scheme-parameter?
+	    pbe-cipher-parameter-encryption-scheme
+
+	    make-pbe-cipher-kdf-parameter pbe-cipher-kdf-parameter?
+	    pbe-cipher-parameter-kdf
+
+	    make-pbe-cipher-salt-parameter pbe-cipher-salt-parameter?
+	    pbe-cipher-parameter-salt
+
+	    make-pbe-cipher-iteration-parameter pbe-cipher-iteration-parameter?
+	    pbe-cipher-parameter-iteration
 	    )
     (import (rnrs)
+	    (springkussen cipher parameter)
 	    (springkussen conditions)
 	    (springkussen misc record))
+
+(define-syntax define-pbe-parameter (make-define-cipher-parameter))
+
+(define-pbe-parameter pbe-cipher-encryption-scheme-parameter
+  make-pbe-cipher-encryption-parameter pbe-cipher-encryption-scheme-parameter?
+  (scheme pbe-cipher-parameter-encryption-scheme))
+
+(define-pbe-parameter pbe-cipher-kdf-parameter
+  make-pbe-cipher-kdf-parameter pbe-cipher-kdf-parameter?
+  (kdf pbe-cipher-parameter-kdf))
+
+(define-pbe-parameter pbe-cipher-salt-parameter
+  make-pbe-cipher-salt-parameter pbe-cipher-salt-parameter?
+  (salt pbe-cipher-parameter-salt))
+
+(define-pbe-parameter pbe-cipher-iteration-parameter
+  make-pbe-cipher-iteration-parameter pbe-cipher-iteration-parameter?
+  (iteration pbe-cipher-parameter-iteration))
 
 (define-record-type pbe-scheme-descriptor
   (fields name
 	  setupper
+	  padder
 	  encryptor
 	  decryptor
 	  finalizer))
@@ -58,6 +91,12 @@
 
 (define (pbe-scheme-descriptor:done desc state)
   ((pbe-scheme-descriptor-finalizer desc) state))
+
+(define (pbe-scheme-descriptor:padding desc state M)
+  ((pbe-scheme-descriptor-padder desc) state M #t))
+
+(define (pbe-scheme-descriptor:unpadding desc state M)
+  ((pbe-scheme-descriptor-padder desc) state M #f))
 
 (define (pbe-scheme-descriptor:encrypt desc key pt ps ct cs)
   ((pbe-scheme-descriptor-encryptor desk) key pt ps ct cs))

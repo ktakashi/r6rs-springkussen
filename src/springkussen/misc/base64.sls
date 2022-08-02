@@ -124,7 +124,7 @@
 	       (define line-width
 		 (or (and param (base64-encode-parameter-line-width param)) lw))
 	       (define padding?
-		 (or (and param (base64-encode-parameter-padding?)) pad))
+		 (or (and param (base64-encode-parameter-padding? param)) pad))
 	       (define (put v) (put-u8 out (or v #x0a)))
 	       (define (get) (get-u8 in))
 	       (define encoder (make-base64-encoder table line-width padding?))
@@ -200,7 +200,7 @@
 
 (define *decode-table*
   ;;    !   "   #   $   %   &   '   (   )   *   +   ,   -   .   /
-  #(#f  #f  #f  #f  #f  #f  #f  #f  #f  #f  #f  62  #f  #f  #f  63  
+  '#(#f  #f  #f  #f  #f  #f  #f  #f  #f  #f  #f  62  #f  #f  #f  63  
   ;;0   1   2   3   4   5   6   7   8   9   :   ;   <   =   >   ?
     52  53  54  55  56  57  58  59  60  61  #f  #f  #f  #f  #f  #f
   ;;@   A   B   C   D   E   F   G   H   I   J   K   L   M   N   O
@@ -216,7 +216,7 @@
 (define *encode-table*
   (vector-map char->integer
      ;;0   1   2   3   4   5   6   7   8   9   10  11  12  13  14  15
-   #(#\A #\B #\C #\D #\E #\F #\G #\H #\I #\J #\K #\L #\M #\N #\O #\P
+   '#(#\A #\B #\C #\D #\E #\F #\G #\H #\I #\J #\K #\L #\M #\N #\O #\P
      ;;16  17  18  19  20  21  22  23  24  25  26  27  28  29  30  31
      #\Q #\R #\S #\T #\U #\V #\W #\X #\Y #\Z #\a #\b #\c #\d #\e #\f
      ;;32  33  34  35  36  37  38  39  40  41  42  43  44  45  46  47
@@ -229,7 +229,7 @@
 ;; base64url
 (define *decode-url-table*
   ;;    !   "   #   $   %   &   '   (   )   *   +   ,   -   .   /
-  #(#f  #f  #f  #f  #f  #f  #f  #f  #f  #f  #f  #f  #f  62  #f  #f  
+  '#(#f  #f  #f  #f  #f  #f  #f  #f  #f  #f  #f  #f  #f  62  #f  #f  
   ;;0   1   2   3   4   5   6   7   8   9   :   ;   <   =   >   ?
     52  53  54  55  56  57  58  59  60  61  #f  #f  #f  #f  #f  #f
   ;;@   A   B   C   D   E   F   G   H   I   J   K   L   M   N   O
@@ -245,7 +245,7 @@
 (define *encode-url-table*
   (vector-map char->integer
      ;;0   1   2   3   4   5   6   7   8   9   10  11  12  13  14  15
-   #(#\A #\B #\C #\D #\E #\F #\G #\H #\I #\J #\K #\L #\M #\N #\O #\P
+   '#(#\A #\B #\C #\D #\E #\F #\G #\H #\I #\J #\K #\L #\M #\N #\O #\P
      ;;16  17  18  19  20  21  22  23  24  25  26  27  28  29  30  31
      #\Q #\R #\S #\T #\U #\V #\W #\X #\Y #\Z #\a #\b #\c #\d #\e #\f
      ;;32  33  34  35  36  37  38  39  40  41  42  43  44  45  46  47

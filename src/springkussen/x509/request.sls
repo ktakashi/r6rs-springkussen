@@ -50,7 +50,7 @@
 	    make-x509-challenge-password-attribute
 	    x509-challenge-password-attribute?
 	    make-x509-extension-request-attribute
-	    x509-extension-request-attribute
+	    x509-extension-request-attribute?
 	    
 	    make-x509-certification-request-info
 	    x509-certification-request-info?

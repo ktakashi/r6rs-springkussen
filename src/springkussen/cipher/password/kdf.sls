@@ -28,13 +28,14 @@
 ;;;   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;  
 
+;; ref: https://datatracker.ietf.org/doc/html/rfc8018#section-5
 #!r6rs
 (library (springkussen cipher password kdf)
     (export pbe-kdf-parameter?
 
 	    make-pbkdf-1
 	    make-pbe-kdf-digest-parameter pbe-kdf-digest-parameter?
-
+	    
 	    make-pbkdf-2
 	    make-pbe-kdf-prf-parameter pbe-kdf-prf-parameter?
 

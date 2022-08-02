@@ -196,6 +196,8 @@
 		   'make-x509-authority-key-identifier
 		   "authorityCertIssuer must be a general-names" n)))
 	      (case-lambda
+	       (()
+		((n x509-authority-key-identifier->asn1-object) #f #f #f))
 	       ((ki)
 		(check-bv ki)
 		((n x509-authority-key-identifier->asn1-object)
