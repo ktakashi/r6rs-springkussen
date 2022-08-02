@@ -34,7 +34,7 @@
 	(pt (integer->bytevector (vector-ref vec 2) block-size))
 	(ct (integer->bytevector (vector-ref vec 3) block-size)))
     (define skey
-      (symmetric-mode-descriptor:start cbc-mode-descriptor scheme key param))
+      (symmetric-mode-descriptor:start cbc-mode-descriptor scheme #f key param))
     (define (encrypt skey pt)
       (symmetric-mode-descriptor:set-iv! cbc-mode-descriptor skey
 					 (parameter-iv param))

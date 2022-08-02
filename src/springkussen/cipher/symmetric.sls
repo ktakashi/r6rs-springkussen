@@ -74,7 +74,7 @@
 	    make-rfc3686-parameter rfc3686-parameter?
 	    make-round-parameter round-parameter?
 	    
-	    pkcs7-padding
+	    pkcs7-padding no-padding
 	    )
     (import (rnrs)
 	    (springkussen cipher parameter) ;; for convenience
@@ -147,7 +147,8 @@
     (let* ((block-size (symmetric-cipher:block-size cipher))
 	   (pt-len (bytevector-length bv))
 	   (pt-blocks (div pt-len block-size))
-	   (ct-len (if (zero? (mod pt-len block-size))
+	   (ct-len (if (and (not (zero? pt-len))
+			    (zero? (mod pt-len block-size)))
 		       (* (+ pt-blocks 2) block-size)
 		       (* (+ pt-blocks 1) block-size)))
 	   (r (symmetric-cipher:encrypt-last-block!
@@ -215,7 +216,7 @@
 	   (scheme (symmetric-cipher-spec-scheme cipher-spec))
 	   (mode (symmetric-cipher-spec-mode cipher-spec))
 	   (mode-key (symmetric-mode-descriptor:start
-		      mode scheme (symmetric-key-raw-value symmetric-key)
+		      mode scheme op (symmetric-key-raw-value symmetric-key)
 		      param)))
       (symmetric-cipher-op-set! cipher op)
       (symmetric-cipher-mode-key-set! cipher mode-key)
@@ -236,10 +237,10 @@
 	(pt-len (- (bytevector-length pt) ps))
 	(ct-len (- (bytevector-length ct) cs))
 	(spec (symmetric-cipher-cipher-spec cipher)))
-    (unless (zero? (div pt-len block-size))
+    (unless (zero? (mod pt-len block-size))
       (springkussen-error 'symmetric-cipher:encrypt!
 			  "Plain text size must be multiple of block size"))
-    (unless (= pt-len ct-len)
+    (when (> pt-len ct-len)
       (springkussen-assertion-violation 'symmetric-cipher:encrypt!
 	  "Output cipher text buffer is too small for the input"))
     (let ((mode (symmetric-cipher-spec-mode spec))
@@ -294,7 +295,7 @@
 	(pt-len (- (bytevector-length pt) ps))
 	(ct-len (- (bytevector-length ct) cs))
 	(spec (symmetric-cipher-cipher-spec cipher)))
-    (unless (zero? (div ct-len block-size))
+    (unless (zero? (mod ct-len block-size))
       (springkussen-error 'symmetric-cipher:decrypt!
 			  "Cipher text size must be multiple of block size"))
     (unless (= pt-len ct-len)
@@ -302,7 +303,7 @@
 	  "Output plain text buffer is too small for the input"))
     (let ((mode (symmetric-cipher-spec-mode spec))
 	  (mode-key (symmetric-cipher-mode-key cipher)))
-      (symmetric-mode-descriptor:decrypt mode mode-key pt ps ct cs))))
+      (symmetric-mode-descriptor:decrypt mode mode-key ct cs pt ps))))
   
 (define (symmetric-cipher:decrypt-last-block! cipher ct cs pt ps)
   (unless (symmetric-cipher? cipher)
@@ -355,6 +356,11 @@
 	   (new (make-bytevector (- len pad) 0)))
       (bytevector-copy! bv 0 new 0 (- len pad))
       new))
+  (values pad unpad))
+
+(define (no-padding)
+  (define (pad bv block-size) bv)
+  (define (unpad bv block-size) bv)
   (values pad unpad))
 
 

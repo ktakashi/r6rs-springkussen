@@ -41,7 +41,7 @@
 (define-record-type symmetric-cbc
   (fields spec iv key block-length))
 
-(define (cbc-start spec key param)
+(define (cbc-start spec op key param)
   (unless (iv-parameter? param)
     (springkussen-assertion-violation 'start "CBC mode requires IV"))
   (let ((skey (symmetric-scheme-descriptor:setup spec key 
@@ -67,7 +67,7 @@
 
   (unless (zero? (mod pt-len blocklen))
     (springkussen-assertion-violation 'encrypt "invalid argument"))
-  (unless (= pt-len (- (bytevector-length ct) cs))
+  (when (> pt-len (- (bytevector-length ct) cs))
     (springkussen-assertion-violation 'encrypt "invalid argument"))
   (let ((key (symmetric-cbc-key cbc)))
     (let loop ((i 0))

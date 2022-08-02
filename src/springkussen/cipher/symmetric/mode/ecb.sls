@@ -40,7 +40,7 @@
 (define-record-type symmetric-ecb
   (fields spec key block-length))
 
-(define (ecb-start spec key param)
+(define (ecb-start spec op key param)
   (let ((skey (symmetric-scheme-descriptor:setup spec key 
 	       (or (parameter-round param 0) 0)))
 	(blocklen (symmetric-scheme-descriptor-block-size spec)))

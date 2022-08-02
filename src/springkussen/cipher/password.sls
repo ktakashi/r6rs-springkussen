@@ -1,6 +1,6 @@
 ;;; -*- mode:scheme; coding:utf-8; -*-
 ;;;
-;;; springkussen/cipher/password/scheme/descriptor.sls - PBE Scheme descriptor
+;;; springkussen/cipher/password.sls - PBE cipher APIs
 ;;;  
 ;;;   Copyright (c) 2022  Takashi Kato  <ktakashi@ymail.com>
 ;;;   
@@ -28,48 +28,65 @@
 ;;;   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;  
 
+;; ref: https://datatracker.ietf.org/doc/html/rfc8018#section-5
 #!r6rs
-(library (springkussen cipher password scheme descriptor)
-    (export (rename (symmetric-mode-descriptor-builder
-		     pbe-scheme-descriptor-builder)
-		    (symmetric-mode-descriptor? pbe-scheme-descriptor?)
-		    (symmetric-mode-descriptor-name pbe-scheme-descriptor-name))
-	    
-	    make-pbe-cipher-encryption-scheme-parameter
+(library (springkussen cipher password)
+    (export make-pbe-cipher-encryption-scheme-parameter
 	    pbe-cipher-encryption-scheme-parameter?
-	    pbe-cipher-parameter-encryption-scheme
 
 	    make-pbe-cipher-kdf-parameter pbe-cipher-kdf-parameter?
-	    pbe-cipher-parameter-kdf
 
 	    make-pbe-cipher-salt-parameter pbe-cipher-salt-parameter?
-	    pbe-cipher-parameter-salt
 
 	    make-pbe-cipher-iteration-parameter pbe-cipher-iteration-parameter?
-	    pbe-cipher-parameter-iteration)
+
+	    pbe-scheme-descriptor?
+	    pbe-scheme-descriptor-name
+	    (rename (pbes1-scheme-descriptor *pbe:pbes1*))
+
+	    ;; key
+	    (rename (make-symmetric-key make-pbe-key)
+		    (symmetric-key? pbe-key?))
+
+	    ;; KDF
+	    pbe-kdf-parameter?
+
+	    make-pbkdf-1
+	    make-pbe-kdf-digest-parameter pbe-kdf-digest-parameter?
+	    
+	    make-pbkdf-2
+	    make-pbe-kdf-prf-parameter pbe-kdf-prf-parameter?
+
+	    mac->pbkdf2-prf
+	    make-partial-hmac-parameter
+
+
+	    make-pbe-cipher
+	    ;; re-export
+	    symmetric-cipher? 
+	    symmetric-cipher:encrypt-bytevector
+	    symmetric-cipher:decrypt-bytevector
+
+	    symmetric-cipher-operation
+	    symmetric-cipher:init!
+	    symmetric-cipher:encrypt!
+	    symmetric-cipher:encrypt-last-block!
+	    symmetric-cipher:decrypt!
+	    symmetric-cipher:decrypt-last-block!
+	    symmetric-cipher:done!
+	    )
     (import (rnrs)
-	    (springkussen cipher parameter)
-	    (springkussen cipher symmetric mode descriptor)
 	    (springkussen conditions)
-	    (springkussen misc record))
+	    (springkussen cipher symmetric)
+	    (springkussen cipher password kdf)
+	    (springkussen cipher password scheme descriptor)
+	    (springkussen cipher password scheme pbes1))
 
-(define-syntax define-pbe-parameter (make-define-cipher-parameter))
+(define (make-pbe-cipher desc param)
+  (define spec (symmetric-cipher-spec-builder
+		(scheme (pbe-cipher-parameter-encryption-scheme param))
+		(mode desc)))
+  (make-symmetric-cipher spec))
 
-(define-pbe-parameter pbe-cipher-encryption-scheme-parameter
-  make-pbe-cipher-encryption-scheme-parameter
-  pbe-cipher-encryption-scheme-parameter?
-  (scheme pbe-cipher-parameter-encryption-scheme))
-
-(define-pbe-parameter pbe-cipher-kdf-parameter
-  make-pbe-cipher-kdf-parameter pbe-cipher-kdf-parameter?
-  (kdf pbe-cipher-parameter-kdf))
-
-(define-pbe-parameter pbe-cipher-salt-parameter
-  make-pbe-cipher-salt-parameter pbe-cipher-salt-parameter?
-  (salt pbe-cipher-parameter-salt))
-
-(define-pbe-parameter pbe-cipher-iteration-parameter
-  make-pbe-cipher-iteration-parameter pbe-cipher-iteration-parameter?
-  (iteration pbe-cipher-parameter-iteration))
 )
 

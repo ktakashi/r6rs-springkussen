@@ -18,7 +18,7 @@
 	(pt (integer->bytevector (vector-ref vec 2) block-size))
 	(ct (integer->bytevector (vector-ref vec 3) block-size)))
     (define skey
-      (symmetric-mode-descriptor:start ecb-mode-descriptor scheme key param))
+      (symmetric-mode-descriptor:start ecb-mode-descriptor scheme #f key param))
     (define (encrypt skey pt)
       (symmetric-mode-descriptor:encrypt ecb-mode-descriptor skey pt))
     (define (decrypt skey ct)
@@ -44,7 +44,7 @@
 
 (define (test-ecb-start-error msg pred scheme key param)
   (test-error msg pred
-   (symmetric-mode-descriptor:start ecb-mode-descriptor scheme key param)))
+   (symmetric-mode-descriptor:start ecb-mode-descriptor scheme #f key param)))
 
 (test-begin "ECB mode")
 

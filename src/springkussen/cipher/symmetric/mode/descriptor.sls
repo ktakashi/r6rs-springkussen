@@ -59,8 +59,8 @@
 (define-syntax symmetric-mode-descriptor-builder
   (make-record-builder symmetric-mode-descriptor))
 
-(define (symmetric-mode-descriptor:start desc scheme key param)
-  ((symmetric-mode-descriptor-starter desc) scheme key param))
+(define (symmetric-mode-descriptor:start desc scheme op key param)
+  ((symmetric-mode-descriptor-starter desc) scheme op key param))
 
 (define symmetric-mode-descriptor:encrypt
   (case-lambda
