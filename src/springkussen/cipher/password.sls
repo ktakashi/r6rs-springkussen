@@ -39,10 +39,14 @@
 	    make-pbe-cipher-salt-parameter pbe-cipher-salt-parameter?
 
 	    make-pbe-cipher-iteration-parameter pbe-cipher-iteration-parameter?
-
+	    
+	    make-pbes2-cipher-encryption-mode-parameter
+	    pbes2-cipher-encryption-mode-parameter?
+	    
 	    pbe-scheme-descriptor?
 	    pbe-scheme-descriptor-name
-	    (rename (pbes1-scheme-descriptor *pbe:pbes1*))
+	    (rename (pbes1-scheme-descriptor *pbe:pbes1*)
+		    (pbes2-scheme-descriptor *pbe:pbes2*))
 
 	    ;; key
 	    (rename (make-symmetric-key make-pbe-key)
@@ -80,7 +84,8 @@
 	    (springkussen cipher symmetric)
 	    (springkussen cipher password kdf)
 	    (springkussen cipher password scheme descriptor)
-	    (springkussen cipher password scheme pbes1))
+	    (springkussen cipher password scheme pbes1)
+	    (springkussen cipher password scheme pbes2))
 
 (define (make-pbe-cipher desc param)
   (define spec (symmetric-cipher-spec-builder

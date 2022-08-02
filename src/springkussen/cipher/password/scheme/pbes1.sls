@@ -39,8 +39,7 @@
 	    (springkussen cipher symmetric)
 	    (springkussen cipher password kdf)
 	    (springkussen cipher password scheme descriptor)
-	    (springkussen misc bytevectors)
-	    (springkussen random))
+	    (springkussen misc bytevectors))
 
 (define-record-type pbes1-state
   (fields cipher))
