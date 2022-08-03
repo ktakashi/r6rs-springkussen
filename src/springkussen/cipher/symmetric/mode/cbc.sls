@@ -72,7 +72,7 @@
   (let ((key (symmetric-cbc-key cbc)))
     (let loop ((i 0))
       (if (= i pt-len)
-	  ct
+	  i
 	  (let ((b (encrypt key (bytevector-xor! iv 0 pt (+ i ps) blocklen) 0
 			    ct (+ i cs))))
 	    (unless (= b blocklen) 
@@ -95,7 +95,7 @@
   (let ((key (symmetric-cbc-key cbc)))
     (let loop ((i 0))
       (if (= i ct-len)
-	  pt
+	  i
 	  (let ((b (decrypt key ct (+ i cs) pt (+ i ps))))
 	    (unless (= b blocklen)
 	      (springkussen-error 'decrypt "invalid decryption"))

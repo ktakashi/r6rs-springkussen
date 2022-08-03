@@ -74,6 +74,13 @@ _spec_ must be a symmetric cipher spec object.
 
 Makes a symmetric cipher.
 
+###### [Procedure] `symmetric-cipher:block-size` _cipher_
+
+_cipher_ must be a symmetric cipher object.
+
+Returns the block size of the given _cipher_.
+
+
 High level cipher APIs
 ----------------------
 
@@ -102,6 +109,176 @@ Makes a symmetric key object from the given _bv_.
 NOTE: This procedure does **not** check the key length, so it is users'
 responsibilty to provide a right sized bytevector.
 
+
+Low level cipher APIs
+---------------------
+
+Low level APIs provide fine-grained controls to users. It requires primer
+knowledge of the cipher to use them properly. It is recommended to use
+high level APIs unless you know what you are doing.
+
+
+###### [Procedure] `symmetric-cipher:init!` _cipher_ _op_ _symmetric-key_
+###### [Procedure] `symmetric-cipher:init!` _cipher_ _op_ _symmetric-key_ _parameter_
+
+_cipher_ must be a symmetric cipher object.  
+_op_ must be a cipher operation described below.  
+_symmetric-key_ must be a symmetric key object.  
+_parameter_ must be a cipher parameter, if the second form is used.
+
+Initialises the given _cipher_ for the _op_ operation which uses 
+_symmetric-key_.  
+_parameter_ will be used to setup the cipher mode specified when the
+_cipher_ is created.
+
+The procedure overwirtes the previous state of the _cipher_.
+
+###### [Macro] `symmetric-cipher-operation` _op_
+
+A macro to check if the given _op_ identifier is a valid operation for
+a symmetric cipher, and returns the symbol of _op_.
+
+The valid operations are:
+
+- `encrypt`: for encryption
+- `decrypt`: for decryption
+
+###### [Procedure] `symmetric-cipher:encrypt` _cipher_ _pt_
+###### [Procedure] `symmetric-cipher:encrypt` _cipher_ _pt_ _ps_
+
+_cipher_ must be a symmetric cipher object.  
+_pt_ must be a bytevector.  
+_ps_ must be an exact non-negative integer if the second form is used.
+
+Encrypts the given _pt_ from the _ps_ via the _cipher_ and returns 
+a bytevector of the cipher text.  
+NOTE: the length of the target plain text `(- (bytevector-length pt) ps)`
+must be multiply of the block size of the given _cipher_.
+
+###### [Procedure] `symmetric-cipher:encrypt!` _cipher_ _pt_ _ps_ _ct_ _cs_
+
+_cipher_ must be a symmetric cipher object.  
+_pt_ must be a bytevector.  
+_ps_ must be an exact non-negative integer.  
+_ct_ must be a bytevector.  
+_cs_ must be an exact non-negative integer.
+
+Encrypts the given _pt_ from the _ps_ via the _cipher_ and fill the cipher 
+text into the _ct_ from the _cs_, then returns an integer represents the
+length of the cipher text.  
+NOTE: the length of the target plain text `(- (bytevector-length pt) ps)`
+must be multiply of the block size of the given _cipher_.
+
+###### [Procedure] `symmetric-cipher:encrypt-last-block` _cipher_ _pt_
+###### [Procedure] `symmetric-cipher:encrypt-last-block` _cipher_ _pt_ _ps_
+
+_cipher_ must be a symmetric cipher object.  
+_pt_ must be a bytevector.  
+_ps_ must be an exact non-negative integer if the second form is used.
+
+Encrypts the given _pt_ from the _ps_ via the _cipher_ and returns 
+a bytevector of the cipher text. This procedure pads the given _pt_ if
+the _cipher_ has a padding procedure.  
+If the _cipher_ doesn't have a padding procedure, then it is users' 
+responsibilty to make sure the length of the target bytevector is
+multiply of the block size.
+
+###### [Procedure] `symmetric-cipher:encrypt-last-block!` _cipher_ _pt_ _ps_ _ct_ _cs_
+
+_cipher_ must be a symmetric cipher object.  
+_pt_ must be a bytevector.  
+_ps_ must be an exact non-negative integer.  
+_ct_ must be a bytevector.  
+_cs_ must be an exact non-negative integer.
+
+Encrypts the given _pt_ from the _ps_ via the _cipher_ and fill the
+cipher text into the _ct_ from the _cs_, then returns an integer
+represents the length of the cipher text.
+
+This procedure pads the given _pt_ if the _cipher_ has a padding procedure.
+The _ct_ must hold the length of **padded** plain text.  
+
+If the _cipher_ doesn't have a padding procedure, then it is users'
+responsibilty to make sure the length of the target bytevector is
+multiply of the block size.
+
+---
+The above encryption procedures raises `&springkussen` if the *cipher*s are
+not initialised with `encrypt` operation.
+
+###### [Procedure] `symmetric-cipher:decrypt` _cipher_ _ct_
+###### [Procedure] `symmetric-cipher:decrypt` _cipher_ _ct_ _cs_
+
+_cipher_ must be a symmetric cipher object.  
+_ct_ must be a bytevector.  
+_cs_ must be an exact non-negative integer if the second form is used.
+
+Decrypts the given _ct_ from the _cs_ via the _cipher_ and returns 
+a bytevector of the plain text.  
+NOTE: the length of the target cipher text `(- (bytevector-length ct) cs)`
+must be multiply of the block size of the given _cipher_.
+
+###### [Procedure] `symmetric-cipher:decrypt!` _cipher_ _ct_ _cs_ _pt_ _ps_
+
+_cipher_ must be a symmetric cipher object.  
+_ct_ must be a bytevector.  
+_cs_ must be an exact non-negative integer.  
+_pt_ must be a bytevector.  
+_ps_ must be an exact non-negative integer.
+
+Decrypts the given _ct_ from the _cs_ via the _cipher_ and fill the plain 
+text into the _pt_ from the _ps_, then returns an integer represents the
+length of the plain text.  
+NOTE: the length of the target cipher text `(- (bytevector-length ct) cs)`
+must be multiply of the block size of the given _cipher_.
+
+###### [Procedure] `symmetric-cipher:decrypt-last-block` _cipher_ _ct_
+###### [Procedure] `symmetric-cipher:decrypt-last-block` _cipher_ _ct_ _cs_
+
+_cipher_ must be a symmetric cipher object.  
+_ct_ must be a bytevector.  
+_cs_ must be an exact non-negative integer if the second form is used.
+
+Decrypts the given _ct_ from the _cs_ via the _cipher_ and returns 
+a bytevector of the plain text. This procedure unpads the result of the
+decryption if the _cipher_ has a unpadding procedure.  
+If the _cipher_ doesn't have a unpadding procedure, then it is users' 
+responsibilty to remove excess data of the plain text if exists.
+
+NOTE: the length of the target cipher text `(- (bytevector-length ct) cs)`
+must be multiply of the block size of the given _cipher_.
+
+###### [Procedure] `symmetric-cipher:decrypt-last-block!` _cipher_ _ct_ _cs_ _pt_ _ps_
+
+_cipher_ must be a symmetric cipher object.  
+_ct_ must be a bytevector.  
+_cs_ must be an exact non-negative integer.  
+_pt_ must be a bytevector.  
+_ps_ must be an exact non-negative integer.
+
+Decrypts the given _ct_ from the _cs_ via the _cipher_ and fill the
+plain text into the _pt_ from the _ps_, then returns an integer
+represents the length of the cipher text.
+
+This procedure unpads the result of the decryption if the _cipher_ has a
+unpadding procedure. The _pt_ may have some intact buffer due to the unpadding.
+
+If the _cipher_ doesn't have a unpadding procedure, then it is users' 
+responsibilty to remove excess data of the plain text if exists.
+
+NOTE: the length of the target cipher text `(- (bytevector-length ct) cs)`
+must be multiply of the block size of the given _cipher_.
+
+---
+The above decryption procedures raises `&springkussen` if the *cipher*s are
+not initialised with `decrypt` operation.
+
+
+###### [Procedure] `symmetric-cipher:done!` _cipher_
+
+_cipher_ must be a symmetric cipher object.
+
+Resets the cipher state.
 
 Encryption scheme
 -----------------

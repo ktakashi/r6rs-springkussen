@@ -60,7 +60,7 @@
   (let ((key (symmetric-ecb-key ecb)))
     (let loop ((i 0))
       (if (= i pt-len)
-	  ct
+	  i
 	  (let ((b (encrypt key pt (+ i ps) ct (+ i cs))))
 	    (unless (= b blocklen) 
 	      (springkussen-error 'encrypt "invalid encryption"))
@@ -80,7 +80,7 @@
   (let ((key (symmetric-ecb-key ecb)))
     (let loop ((i 0))
       (if (= i ct-len)
-	  pt
+	  i
 	  (let ((b (decrypt key ct (+ i cs) pt (+ i ps))))
 	    (unless (= b blocklen)
 	      (springkussen-error 'decrypt "invalid decryption"))

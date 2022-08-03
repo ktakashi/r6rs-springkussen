@@ -65,16 +65,26 @@
 (define symmetric-mode-descriptor:encrypt
   (case-lambda
    ((desc mode-specific pt)
-    (let ((out (make-bytevector (bytevector-length pt))))
-      (symmetric-mode-descriptor:encrypt desc mode-specific pt 0 out 0)))
+    (symmetric-mode-descriptor:encrypt desc mode-specific pt 0))
+   ((desc mode-specific pt ps)
+    (let ((out (make-bytevector (- (bytevector-length pt) ps))))
+      (symmetric-mode-descriptor:encrypt desc mode-specific pt ps out 0)
+      out))
+   ((desc mode-specific pt ps out)
+    (symmetric-mode-descriptor:encrypt desc mode-specific pt ps out 0))
    ((desc mode-specific pt ps out pos)
     ((symmetric-mode-descriptor-encryptor desc) mode-specific pt ps out pos))))
 
 (define symmetric-mode-descriptor:decrypt
   (case-lambda
    ((desc mode-specific ct)
-    (let ((out (make-bytevector (bytevector-length ct))))
-      (symmetric-mode-descriptor:decrypt desc mode-specific ct 0 out 0)))
+    (symmetric-mode-descriptor:decrypt desc mode-specific ct 0))
+   ((desc mode-specific ct cs)
+    (let ((out (make-bytevector (- (bytevector-length ct) cs))))
+      (symmetric-mode-descriptor:decrypt desc mode-specific ct cs out 0)
+      out))
+   ((desc mode-specific ct cs out)
+    (symmetric-mode-descriptor:decrypt desc mode-specific ct cs out 0))
    ((desc mode-specific ct cs out pos)
     ((symmetric-mode-descriptor-decryptor desc) mode-specific ct cs out pos))))
 

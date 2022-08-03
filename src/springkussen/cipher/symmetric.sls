@@ -34,14 +34,19 @@
 	    symmetric-cipher-spec-builder
 
 	    symmetric-cipher? make-symmetric-cipher
+	    symmetric-cipher:block-size
 	    symmetric-cipher:encrypt-bytevector
 	    symmetric-cipher:decrypt-bytevector
 
 	    symmetric-cipher-operation
 	    symmetric-cipher:init!
+	    symmetric-cipher:encrypt
 	    symmetric-cipher:encrypt!
+	    symmetric-cipher:encrypt-last-block
 	    symmetric-cipher:encrypt-last-block!
+	    symmetric-cipher:decrypt
 	    symmetric-cipher:decrypt!
+	    symmetric-cipher:decrypt-last-block
 	    symmetric-cipher:decrypt-last-block!
 	    symmetric-cipher:done!
 	    
@@ -144,18 +149,10 @@
     (unless (bytevector? bv)
       (springkussen-assertion-violation 'symmetric-cipher:encrypt-bytevector
 					"Bytevector is required" bv))
-    (let* ((block-size (symmetric-cipher:block-size cipher))
-	   (pt-len (bytevector-length bv))
-	   (pt-blocks (div pt-len block-size))
-	   (ct-len (if (and (not (zero? pt-len))
-			    (zero? (mod pt-len block-size)))
-		       (* (+ pt-blocks 2) block-size)
-		       (* (+ pt-blocks 1) block-size)))
-	   (r (symmetric-cipher:encrypt-last-block!
-	       (symmetric-cipher:init! cipher
-				       (symmetric-cipher-operation encrypt)
-				       symmetric-key param)
-	       bv 0 (make-bytevector ct-len) 0)))
+    (let ((r (symmetric-cipher:encrypt-last-block
+	      (symmetric-cipher:init! cipher
+				      (symmetric-cipher-operation encrypt)
+				      symmetric-key param) bv)))
       (symmetric-cipher:done! cipher)
       r))))
 
@@ -176,16 +173,12 @@
     (unless (bytevector? bv)
       (springkussen-assertion-violation 'symmetric-cipher:decrypt-bytevector
 					"Bytevector is required" bv))
-    (let* ((block-size (symmetric-cipher:block-size cipher))
-	   (ct-len (bytevector-length bv))
-	   (buf (make-bytevector ct-len))
-	   (r (symmetric-cipher:decrypt-last-block!
-	       (symmetric-cipher:init! cipher
-				       (symmetric-cipher-operation decrypt)
-				       symmetric-key param)
-	       bv 0 buf 0)))
+    (let ((r (symmetric-cipher:decrypt-last-block
+	      (symmetric-cipher:init! cipher
+				      (symmetric-cipher-operation decrypt)
+				      symmetric-key param) bv)))
       (symmetric-cipher:done! cipher)
-      (sub-bytevector buf 0 r)))))
+      r))))
 
 (define (symmetric-cipher:block-size cipher)
   (unless (symmetric-cipher? cipher)
@@ -212,6 +205,7 @@
     (unless (enum-set-member? op *operation-enum-set*)
       (springkussen-assertion-violation 'symmetric-cipher:init!
 					"Unknown operation" op))
+    (symmetric-cipher:done! cipher) ;; reset previous state
     (let* ((cipher-spec (symmetric-cipher-cipher-spec cipher))
 	   (scheme (symmetric-cipher-spec-scheme cipher-spec))
 	   (mode (symmetric-cipher-spec-mode cipher-spec))
@@ -221,6 +215,14 @@
       (symmetric-cipher-op-set! cipher op)
       (symmetric-cipher-mode-key-set! cipher mode-key)
       cipher))))
+
+(define symmetric-cipher:encrypt
+  (case-lambda
+   ((cipher pt) (symmetric-cipher:encrypt cipher pt 0))
+   ((cipher pt ps)
+    (let ((ct (make-bytevector (- (bytevector-length pt) ps))))
+      (symmetric-cipher:encrypt! cipher pt ps ct 0)
+      ct))))
 
 (define (symmetric-cipher:encrypt! cipher pt ps ct cs)
   (unless (symmetric-cipher? cipher)
@@ -246,7 +248,20 @@
     (let ((mode (symmetric-cipher-spec-mode spec))
 	  (mode-key (symmetric-cipher-mode-key cipher)))
       (symmetric-mode-descriptor:encrypt mode mode-key pt ps ct cs))))
-    
+
+(define symmetric-cipher:encrypt-last-block
+  (case-lambda
+   ((cipher pt) (symmetric-cipher:encrypt-last-block cipher pt 0))
+   ((cipher pt ps)
+    (let* ((block-size (symmetric-cipher:block-size cipher))
+	   ;; just add extra block size for padding
+	   (ct (make-bytevector (+ (- (bytevector-length pt) ps) block-size)))
+	   (r (symmetric-cipher:encrypt-last-block! cipher pt ps ct 0)))
+      ;; remove excess block if needed
+      (if (= r (bytevector-length ct))
+	  ct
+	  (sub-bytevector ct 0 r))))))
+
 (define (symmetric-cipher:encrypt-last-block! cipher pt ps ct cs)
   (unless (symmetric-cipher? cipher)
     (springkussen-assertion-violation 'symmetric-cipher:encrypt-last-block!
@@ -259,26 +274,21 @@
     (springkussen-assertion-violation 'symmetric-cipher:encrypt-last-block!
 				      "Bytevector is required"))
   (let* ((block-size (symmetric-cipher:block-size cipher))
-	 (pt-len (- (bytevector-length pt) ps))
-	 (pt-blocks (div pt-len block-size))
-	 (pt-mod (mod pt-len block-size))
-	 (ct-len (- (bytevector-length ct) cs))
 	 (spec (symmetric-cipher-cipher-spec cipher))
-	 (padder (symmetric-cipher-padder cipher))
-	 (mode (symmetric-cipher-spec-mode spec))
-	 (mode-key (symmetric-cipher-mode-key cipher)))
-    (when (and padder
-	       (< (div ct-len block-size)
-		  (+ pt-blocks (if (zero? pt-mod) 1 0))))
-      (springkussen-assertion-violation 'symmetric-cipher:encrypt-last-block!
-       "Output cipher text buffer is too small"))
-    (unless (or padder (zero? (mod pt-len block-size)))
-      (springkussen-assertion-violation 'symmetric-cipher:encrypt-last-block!
-	"Padder is not specified but plain text is not multiple of block size"))
-    (if padder
-	(symmetric-mode-descriptor:encrypt
-	 mode mode-key (padder (sub-bytevector pt ps) block-size) 0 ct cs)
-	(symmetric-mode-descriptor:encrypt mode mode-key pt ps ct cs))))
+	 (padder (symmetric-cipher-padder cipher)))
+    (let-values (((pt ps)
+		  (if padder
+		      (values (padder (sub-bytevector pt ps) block-size) 0)
+		      (values pt ps))))
+      (symmetric-cipher:encrypt! cipher pt ps ct cs))))
+
+(define symmetric-cipher:decrypt
+  (case-lambda
+   ((cipher ct) (symmetric-cipher:decrypt cipher ct 0))
+   ((cipher ct cs)
+    (let ((pt (make-bytevector (- (bytevector-length ct) cs))))
+      (symmetric-cipher:decrypt! cipher ct cs pt 0)
+      pt))))
 
 (define (symmetric-cipher:decrypt! cipher ct cs pt ps)
   (unless (symmetric-cipher? cipher)
@@ -304,7 +314,18 @@
     (let ((mode (symmetric-cipher-spec-mode spec))
 	  (mode-key (symmetric-cipher-mode-key cipher)))
       (symmetric-mode-descriptor:decrypt mode mode-key ct cs pt ps))))
-  
+
+(define symmetric-cipher:decrypt-last-block
+  (case-lambda
+   ((cipher ct) (symmetric-cipher:decrypt-last-block cipher ct 0))
+   ((cipher ct cs)
+    (let* ((pt-len (- (bytevector-length ct) cs))
+	   (buf (make-bytevector pt-len))
+	   (r (symmetric-cipher:decrypt-last-block! cipher ct cs buf 0)))
+      (if (= pt-len r)
+	  buf ;; no pad
+	  (sub-bytevector buf 0 r))))))
+
 (define (symmetric-cipher:decrypt-last-block! cipher ct cs pt ps)
   (unless (symmetric-cipher? cipher)
     (springkussen-assertion-violation 'symmetric-cipher:decrypt-last-block!
@@ -317,18 +338,14 @@
     (springkussen-assertion-violation 'symmetric-cipher:decrypt-last-block!
 				      "Bytevector is required"))
 
-  (let* ((block-size (symmetric-cipher:block-size cipher))
-	 (pt-len (- (bytevector-length pt) ps))
-	 (ct-len (- (bytevector-length ct) cs))
-	 (spec (symmetric-cipher-cipher-spec cipher))
-	 (unpadder (symmetric-cipher-unpadder cipher))
-	 (mode (symmetric-cipher-spec-mode spec))
-	 (mode-key (symmetric-cipher-mode-key cipher)))
+  (let ((block-size (symmetric-cipher:block-size cipher))
+	(pt-len (- (bytevector-length pt) ps))
+	(ct-len (- (bytevector-length ct) cs))
+	(unpadder (symmetric-cipher-unpadder cipher)))
     (unless (zero? (mod ct-len block-size))
       (springkussen-error 'symmetric-cipher:decrypt-last-block!
 			  "Cipher text size must be multiple of block size"))
-    (let* ((buf (make-bytevector pt-len))
-	   (r (symmetric-mode-descriptor:decrypt mode mode-key ct cs buf 0))
+    (let* ((r (symmetric-cipher:decrypt cipher ct cs))
 	   (unpad (or (and unpadder (unpadder r block-size)) r)))
       (when (< pt-len (bytevector-length unpad))
 	(springkussen-error 'symmetric-cipher:decrypt-last-block!
@@ -339,7 +356,12 @@
 (define (symmetric-cipher:done! cipher)
   ;; Reset cipher
   (symmetric-cipher-op-set! cipher #f)
-  (symmetric-cipher-mode-key-set! cipher #f)
+  (let ((mode-key (symmetric-cipher-mode-key cipher)))
+    (when mode-key
+      (let ((spec (symmetric-cipher-cipher-spec cipher)))
+	(symmetric-mode-descriptor:done (symmetric-cipher-spec-mode spec)
+					mode-key)
+	(symmetric-cipher-mode-key-set! cipher #f))))
   cipher)
 
 (define (pkcs7-padding)

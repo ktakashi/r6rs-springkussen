@@ -18,6 +18,13 @@
       (key (make-pbe-key "password"))
       (salt (make-pbe-cipher-salt-parameter #vu8(1 2 3 4 5 6 7 8))))
   (test-assert (pbe-key? key))
+  (symmetric-cipher:decrypt-bytevector
+	       cipher key
+	       (make-cipher-parameter salt)
+	       (symmetric-cipher:encrypt-bytevector
+		cipher key
+		(make-cipher-parameter salt)
+		#vu8()))
   (test-equal #vu8()
 	      (symmetric-cipher:decrypt-bytevector
 	       cipher key

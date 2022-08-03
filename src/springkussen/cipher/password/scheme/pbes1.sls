@@ -69,13 +69,11 @@
 
 (define (pbes1-encrypt state pt ps ct cs)
   (let ((cipher (pbes1-state-cipher state)))
-    (symmetric-cipher:encrypt! cipher pt ps ct cs)
-    ct))
+    (symmetric-cipher:encrypt! cipher pt ps ct cs)))
 
 (define (pbes1-decrypt state ct cs pt ps)
   (let ((cipher (pbes1-state-cipher state)))
-    (symmetric-cipher:decrypt! cipher ct cs pt ps)
-    pt))
+    (symmetric-cipher:decrypt! cipher ct cs pt ps)))
 
 (define (pbes1-done state)
   (symmetric-cipher:done! (pbes1-state-cipher state)))
