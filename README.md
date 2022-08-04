@@ -104,6 +104,26 @@ In this library, the following asymmetric cipher algorithms are supported
 NOTE: ECC is not in this category as it can't be an asymmetric cipher.
 
 
+Password Based Encryption
+-------------------------
+
+Password Based Encryption (PBE) is a variant of symmetric ciphers.
+
+### Encryption schemes
+
+In this library, the following PBE schems are supported
+
+- [x] PBES1
+- [x] PBES1
+
+### Key derivation function (KDF)
+
+In this library, the following KDFs are supported.
+
+- [x] PBKDF1
+- [x] PBKDF2
+
+
 Digest algorithms
 -----------------
 
