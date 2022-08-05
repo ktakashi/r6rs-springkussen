@@ -71,9 +71,11 @@
 	    asn1-collection? asn1-collection-elements
 	    der-sequence? make-der-sequence <der-sequence>
 	    der-sequence der-sequence-elements
+	    der-sequence-of?
 	    
 	    der-set? make-der-set <der-set>
 	    der-set der-set-elements
+	    der-set-of?
 	    
 	    der-numeric-string? make-der-numeric-string
 	    der-numeric-string-value

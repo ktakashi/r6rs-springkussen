@@ -89,6 +89,7 @@
 	    (rename (der-sequence <der-sequence>)
 		    (%der-sequence der-sequence)
 		    (asn1-collection-elements der-sequence-elements))
+	    der-sequence-of?
 	    
 	    SET
 	    SET-OF
@@ -96,6 +97,7 @@
 	    (rename (der-set <der-set>)
 		    (%der-set der-set)
 		    (asn1-collection-elements der-set-elements))
+	    der-set-of?
 	    
 	    NUMERIC-STRING
 	    der-numeric-string? make-der-numeric-string
@@ -326,11 +328,18 @@
 (define-record-type der-sequence
   (parent asn1-collection))
 (define (%der-sequence . lis) (make-der-sequence lis))
-
+(define (der-sequence-of? pred)
+  (lambda (v)
+    (and (der-sequence? v)
+	 (for-all pred (asn1-collection-elements v)))))
 ;; Set
 (define-record-type der-set
   (parent asn1-collection))
 (define (%der-set . lis) (make-der-set lis))
+(define (der-set-of? pred)
+  (lambda (v)
+    (and (der-set? v)
+	 (for-all pred (asn1-collection-elements v)))))
 
 ;; Numeric string
 (define-record-type der-numeric-string
