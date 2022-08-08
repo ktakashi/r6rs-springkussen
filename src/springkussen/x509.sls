@@ -79,6 +79,19 @@
 	    make-x509-extension-request-attribute
 	    x509-extension-request-attribute?
 
+	    ;; CRL
+	    x509-certificate-revocation-list?
+	    read-x509-certificate-revocation-list
+	    bytevector->x509-certificate-revocation-list
+	    write-x509-certificate-revocation-list
+	    x509-certificate-revocation-list->bytevector
+
+	    x509-certificate-revocation-list:certificate-revoked?
+	    x509-certificate-revocation-list:signed?
+	    x509-certificate-revocation-list:sign
+	    x509-certificate-revocation-list:revoked-certificates
+	    x509-certificate-revocation-list:issuer
+
 	    ;; Extensions
 	    make-x509-extensions x509-extensions? x509-extensions
 	    x509-extensions-length x509-extensions-elements
@@ -116,6 +129,7 @@
 	    (rename (springkussen x509 certificate)
 		    (make-x509-validity c:make-x509-validity))
 	    (springkussen x509 request)
+	    (springkussen x509 revocation)
 	    (springkussen x509 signature))
 
 (define (x509-extensions . e*) (make-x509-extensions e*))

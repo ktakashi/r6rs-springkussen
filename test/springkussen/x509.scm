@@ -205,7 +205,67 @@
       (test-assert (x509-certificate:validate c
 		     (list (make-x509-signature-validator ca-cert)))))))
       
+;; CRL
+(let ()
+  (define revoked-cert-b64
+    (string-append
+     "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"))
+  (define revoked-cert (bytevector->x509-certificate
+			(base64-decode
+			 (string->utf8 revoked-cert-b64))))
+  (define crl-bv
+    (base64-decode
+     (string->utf8
+      (string-append
+       "MIICczCCAVsCAQEwDQYJKoZIhvcNAQELBQAwYTELMAkGA1UEBhMCVVMxFTATBgNVBAoTDE"
+       "RpZ2lDZXJ0IEluYzEZMBcGA1UECxMQd3d3LmRpZ2ljZXJ0LmNvbTEgMB4GA1UEAxMXRGln"
+       "aUNlcnQgR2xvYmFsIFJvb3QgQ0EXDTIyMDgwNDE4NTI0MVoXDTIyMDgyNTE4NTI0MVowgZ"
+       "MwLwIQEj3PhK5IQbSvpzHmKQQqyBcNMDYxMTEwMDAwMDAwWjAMMAoGA1UdFQQDCgEEMC8C"
+       "ECqEb7Dqwkryl1QKwOpjTggXDTA2MTExMDAwMDAwMFowDDAKBgNVHRUEAwoBBDAvAhAPFo"
+       "NPgpGR4yr/eyk5t5pSFw0yMDA2MTIwNTMwMDBaMAwwCgYDVR0VBAMKAQWgMDAuMB8GA1Ud"
+       "IwQYMBaAFAPeUDVW0Uy7ZvCj4hsbw5eyPdFVMAsGA1UdFAQEAgICfDANBgkqhkiG9w0BAQ"
+       "sFAAOCAQEANrplrtE0XH018zWTTgNnATngTZDWZJsq2zVgNX4dL9oBaXf8HAVUgweGJ1xp"
+       "6tYJKp4xiXETI1rA4jvXXCkJuKNpavsfAskclLj/Iebh7jid5OzWEDtJKUI1nLuRIKeHni"
+       "ZSVGNKMboEw9biWpCK76GCAUeXszpvLo2gnQ8aZyj/aWEfQiVy1dKJcJKU8QqGXFpJmTVD"
+       "Ti5uCeFvmBkGt4S1RAGdU81d3HiPS63VWiVi87AbV1+P5NsxSwZ142bhKx8JWZiiZChRQO"
+       "+7vzfMLxK9qty3MB6MIpQGfs25nnSEjrC8dJG5Nu2XD/LRBKeNq1eYjJAbK/pJgZfThfms"
+       "Hw=="))))
 
+  (define crl (bytevector->x509-certificate-revocation-list crl-bv))
+  (test-assert (x509-certificate-revocation-list? crl))
+  (test-assert
+   (x509-certificate-revocation-list:certificate-revoked? crl revoked-cert)))
 
 (test-end)
 (exit (zero? (test-runner-fail-count (test-runner-current))))
