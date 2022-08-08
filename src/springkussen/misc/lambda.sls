@@ -32,9 +32,13 @@
 (library (springkussen misc lambda)
     (export define/typed
 	    lambda/typed
-	    case-lambda/typed)
+	    case-lambda/typed
+	    list-of?)
     (import (rnrs)
 	    (springkussen conditions))
+
+;; a bit weird location
+(define (list-of? pred) (lambda (v) (for-all pred v)))
 
 (define-syntax define/typed
   (syntax-rules ()
@@ -44,7 +48,7 @@
 (define-syntax lambda/typed
   (lambda (x)
     (define (parse-pred pred)
-      (syntax-case pred (and or)
+      (syntax-case pred (and or quote)
 	((and p0 p1 ...)
 	 (with-syntax ((p0 (parse-pred #'p0))
 		       (p1 (parse-pred #'(and p1 ...))))
@@ -63,9 +67,10 @@
 	(p
 	 (identifier? #'p)
 	 #'p)
+	;; evaludate :)
+	((p ...) #'(let ((t (p ...))) (lambda (v) (t v))))
 	;; compare with equal?
-	((p ...) #'(lambda (v) (equal? v (list p ...))))
-	(p #'(lambda (v) (equal? v p)))))
+	((quote p) #'(lambda (v) (equal? v p)))))
     (define (make-message v pred)
       (define var (syntax->datum v))
       (define procs (syntax->datum pred))

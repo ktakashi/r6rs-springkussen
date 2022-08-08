@@ -42,7 +42,12 @@
 	    x509-certificate-revocation-list:signed?
 	    x509-certificate-revocation-list:sign
 	    x509-certificate-revocation-list:revoked-certificates
-	    x509-certificate-revocation-list:issuer)
+	    x509-certificate-revocation-list:issuer
+	    x509-certificate-revocation-list:add-revoked-certificates
+
+	    x509-tbs-cert-list? make-x509-tbs-cert-list
+	    x509-revoked-certificate? make-x509-revoked-certificate
+	    x509-certificate-list? make-x509-certificate-list)
     (import (rnrs)
 	    (springkussen asn1)
 	    (springkussen conditions)
@@ -117,7 +122,7 @@
 			     (signature (or #f algorithm-identifier?))
 			     (issuer x509-name?)
 			     (this-update x509-time?)
-			     (next-update x509-time?)
+			     (next-update (or #f x509-time?))
 			     (revoked-certificates
 			      (or #f revoked-certificates?))
 			     (crl-extensions (or #f x509-extensions?)))
@@ -191,10 +196,12 @@
 		((n x509-certificate-list->asn1-object)
 		 tbs-cert-list signature-algorithm signature)))))
 (define (x509-certificate-list->asn1-object self)
-  (der-sequence
-   (x509-certificate-list-tbs-cert-list self)
-   (x509-certificate-list-signature-algorithm self)
-   (x509-certificate-list-signature-value self)))
+  (let ((sa (x509-certificate-list-signature-algorithm self))
+	(sig (x509-certificate-list-signature-value self)))
+    (unless (and sa sig)
+      (springkussen-assertion-violation 'x509-certificate-list->asn1-object
+					"CertificateList is not signed"))
+    (der-sequence (x509-certificate-list-tbs-cert-list self) sa sig)))
 
 (define (asn1-object->x509-certificate-list asn1-object)
   (unless (der-sequence? asn1-object)
@@ -249,7 +256,7 @@
 
 (define/typed (x509-certificate-revocation-list:revoked-certificates
 	       (crl x509-certificate-revocation-list?))
-  (define cl (x509-certificate-revocation-list-cl))
+  (define cl (x509-certificate-revocation-list-cl crl))
   (define tbs (x509-certificate-list-tbs-cert-list cl))
   (define (->list rc)
     (list (der-integer-value (x509-revoked-certificate-user-certificate rc))
@@ -272,17 +279,17 @@
 
 (define/typed (x509-certificate-revocation-list:signed?
 	       (crl x509-certificate-revocation-list?))
-  (define cl (x509-certificate-revocation-list-cl))
+  (define cl (x509-certificate-revocation-list-cl crl))
   (and (x509-certificate-list-signature-algorithm cl)
        (x509-certificate-list-signature-value cl)))
 
-;; creates a new CRL with signaturre if the given crl is not signed
+;; creates a new CRL with signature if the given crl is not signed
 (define/typed (x509-certificate-revocation-list:sign
 	       (crl x509-certificate-revocation-list?)
 	       (private-key private-key?))
   (if (x509-certificate-revocation-list:signed? crl)
       crl
-      (let* ((cl (x509-certificate-revocation-list-cl))
+      (let* ((cl (x509-certificate-revocation-list-cl crl))
 	     (tbs-list (x509-certificate-list-tbs-cert-list cl))
 	     (sign-sa (make-x509-default-signature-algorithm private-key))
 	     (signer
@@ -290,8 +297,36 @@
 	     (sig (signer:sign-message signer
 				       (asn1-object->bytevector tbs-list))))
 	(make-x509-certificate-revocation-list
-	 (make-x509-certificate-list tbs-list sign-sa
-				     (make-der-bit-string sig))))))
+	 (make-x509-certificate-list
+	  (make-x509-tbs-cert-list
+	   (x509-tbs-cert-list-version tbs-list)
+	   sign-sa
+	   (x509-tbs-cert-list-issuer tbs-list)
+	   (x509-tbs-cert-list-this-update tbs-list)
+	   (x509-tbs-cert-list-next-update tbs-list)
+	   (x509-tbs-cert-list-revoked-certificates tbs-list)
+	   (x509-tbs-cert-list-crl-extensions tbs-list))
+	  sign-sa
+	  (make-der-bit-string sig))))))
 
+(define/typed (x509-certificate-revocation-list:add-revoked-certificates
+	       (crl x509-certificate-revocation-list?)
+	       (revoked-certificates (list-of? x509-revoked-certificate?)))
+  (let* ((cl (x509-certificate-revocation-list-cl crl))
+	 (tbs-list (x509-certificate-list-tbs-cert-list cl)))
+    (make-x509-certificate-revocation-list
+     (make-x509-certificate-list
+      (make-x509-tbs-cert-list
+       (x509-tbs-cert-list-version tbs-list)
+       #f
+       (x509-tbs-cert-list-issuer tbs-list)
+       (x509-tbs-cert-list-this-update tbs-list)
+       (x509-tbs-cert-list-next-update tbs-list)
+       (make-der-sequence
+	(append (asn1-collection-elements
+		 (x509-tbs-cert-list-revoked-certificates tbs-list))
+		revoked-certificates))
+       (x509-tbs-cert-list-crl-extensions tbs-list))
+      #f #f))))
   
 )

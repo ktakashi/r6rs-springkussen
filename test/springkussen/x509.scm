@@ -267,5 +267,32 @@
   (test-assert
    (x509-certificate-revocation-list:certificate-revoked? crl revoked-cert)))
 
+(let* ((update (make-x509-time "221207102146Z"))
+       (builder (x509-certificate-revocation-list-builder-builder
+		 (issuer (make-x509-distinguished-names '(C "NL")
+							'(O "Springkussen")
+							'(CN "Springkussen")))
+		 (this-update update)
+		 (next-update update) ;; lazy
+		 (revoked-certificates
+		  (list (make-x509-revoked-certificate 100 update)))))
+       (kp (key-pair-factory:generate-key-pair *key-pair-factory:ecdsa*
+	    (make-ecdsa-ec-parameter *ec-parameter:p192*))))
+  (test-assert (x509-certificate-revocation-list-builder? builder))
+  (let ((crl (x509-certificate-revocation-list-builder:build
+	      builder (key-pair-private kp))))
+    (test-assert (x509-certificate-revocation-list? crl))
+    (test-assert (x509-certificate-revocation-list:signed? crl))
+    (test-equal 1 (length (x509-certificate-revocation-list:revoked-certificates crl)))
+    (let ((crl-unsinged
+	   (x509-certificate-revocation-list:add-revoked-certificates crl
+	    (list (make-x509-revoked-certificate 101 update)))))
+      
+      (test-assert (not (x509-certificate-revocation-list:signed? crl-unsinged)))
+      (let ((crl2 (x509-certificate-revocation-list:sign crl-unsinged
+							 (key-pair-private kp))))
+	(test-assert (x509-certificate-revocation-list:signed? crl2))
+	(test-equal 2 (length (x509-certificate-revocation-list:revoked-certificates crl2)))))))
+
 (test-end)
 (exit (zero? (test-runner-fail-count (test-runner-current))))

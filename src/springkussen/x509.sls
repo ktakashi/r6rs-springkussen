@@ -51,6 +51,7 @@
 	    make-x509-signature-validator
 
 	    make-x509-validity x509-validity?
+	    make-x509-time x509-time?
 	    x509-name?
 	    make-x509-distinguished-names
 
@@ -91,6 +92,14 @@
 	    x509-certificate-revocation-list:sign
 	    x509-certificate-revocation-list:revoked-certificates
 	    x509-certificate-revocation-list:issuer
+	    x509-certificate-revocation-list:add-revoked-certificates
+
+	    x509-certificate-revocation-list-builder?
+	    x509-certificate-revocation-list-builder-builder
+	    x509-certificate-revocation-list-builder:build
+
+	    x509-revoked-certificate?
+	    make-x509-revoked-certificate
 
 	    ;; Extensions
 	    make-x509-extensions x509-extensions? x509-extensions
@@ -122,14 +131,18 @@
 	    (springkussen asn1)
 	    (springkussen conditions)
 	    (springkussen misc bytevectors)
+	    (springkussen misc lambda)
 	    (springkussen misc record)
 	    (springkussen signature)
-	    (springkussen x509 types)
+	    (rename (springkussen x509 types)
+		    (make-x509-time t:make-x509-time))
 	    (springkussen x509 extensions)
 	    (rename (springkussen x509 certificate)
 		    (make-x509-validity c:make-x509-validity))
 	    (springkussen x509 request)
-	    (springkussen x509 revocation)
+	    (rename (springkussen x509 revocation)
+		    (make-x509-revoked-certificate
+		     r:make-x509-revoked-certificate))
 	    (springkussen x509 signature))
 
 (define (x509-extensions . e*) (make-x509-extensions e*))
@@ -142,17 +155,18 @@
 (define (x509-attributes . a*) (make-x509-attributes a*))
 
 (define (make-x509-validity not-before not-after)
-  (c:make-x509-validity
-   (make-x509-time (make-der-utc-time not-before))
-   (make-x509-time (make-der-utc-time not-after))))
+  (c:make-x509-validity (make-x509-time not-before) (make-x509-time not-after)))
+
+(define (make-x509-time time) (t:make-x509-time (make-der-utc-time time)))
 
 (define (make-x509-distinguished-names . n) (list->x509-name n))
 
 (define make-x509-self-signed-certificate
-  (case-lambda
+  (case-lambda/typed
    ((key-pair sn subject validity)
     (make-x509-self-signed-certificate key-pair sn subject validity #f))
-   ((key-pair sn subject validity extensions)
+   (((key-pair key-pair?) (sn integer?) (subject x509-name?)
+     (validity x509-validity?) (extensions (or #f x509-extensions?)))
     (define (make-tbs sn signature subject validity public-key extensions)
       (define version (and extensions (make-der-integer 2)))
       (make-x509-tbs-certificate
@@ -167,24 +181,6 @@
        #f
        #f
        extensions))
-    (unless (integer? sn)
-      (springkussen-assertion-violation 'make-x509-self-signed-certificate
-					"Integer is requried" sn))
-    (unless (key-pair? key-pair)
-      (springkussen-assertion-violation 'make-x509-self-signed-certificate
-					"Key pair is requried" key-pair))
-    (unless (x509-name? subject)
-      (springkussen-assertion-violation 'make-x509-self-signed-certificate
-					"X509 name is required for subject"
-					subject))
-    (unless (x509-validity? validity)
-      (springkussen-assertion-violation 'make-x509-self-signed-certificate
-					"X509 validity is required"
-					validity))
-    (unless (or (not extensions) (x509-extensions? extensions))
-      (springkussen-assertion-violation 'make-x509-self-signed-certificate
-					"X509 extensions is required"
-					extensions))
     (let* ((private-key (key-pair-private key-pair))
 	   (sa (make-x509-default-signature-algorithm private-key))
 	   (signer ((signature-algorithm->signer-creator sa) private-key))
@@ -214,11 +210,8 @@
 (define x509-csr-builder-sa-retriever
   x509-certificate-signing-request-builder-signature-algorithm-retriever)
 
-(define (x509-certificate-signing-request-builder:build builder)
-  (unless (x509-certificate-signing-request-builder? builder)
-    (springkussen-assertion-violation
-     'x509-certificate-signing-request-builder:build
-     "X509 CSR builder is required" builder))
+(define/typed (x509-certificate-signing-request-builder:build
+	       (builder x509-certificate-signing-request-builder?))
   (let* ((kp (x509-csr-builder-key-pair builder))
 	 (ctr (x509-csr-builder-sa-retriever builder))
 	 (cri (make-x509-certification-request-info
@@ -233,7 +226,46 @@
 	 (sig (signer:sign-message signer signing-content)))
     (make-x509-certificate-signing-request 
      (make-x509-certification-request cri sa (make-der-bit-string sig)))))
-   
+
+(define make-x509-revoked-certificate
+  (case-lambda/typed
+   (((serial-number integer?) (revocation-date x509-time?))
+    (r:make-x509-revoked-certificate
+     (make-der-integer serial-number) revocation-date #f))
+   (((serial-number integer?) (revocation-date x509-time?)
+     (extensions x509-extensions?))
+    (r:make-x509-revoked-certificate
+     (make-der-integer serial-number) revocation-date extensions))))
+
+(define-record-type x509-certificate-revocation-list-builder
+  (fields issuer
+	  this-update
+	  next-update
+	  revoked-certificates
+	  extensions
+	  signature-algorithm-retriever))
+(define-syntax x509-certificate-revocation-list-builder-builder
+  (make-record-builder x509-certificate-revocation-list-builder
+   ((revoked-certificates '())
+    (signature-algorithm-retriever make-x509-default-signature-algorithm))))
+
+(define/typed (x509-certificate-revocation-list-builder:build
+	       (builder x509-certificate-revocation-list-builder?)
+	       (private-key private-key?))
+  ;; I'm lazy to check v1 or v2 by checking presence of extensions both
+  ;; CRL and revoked cert, so just use v2...
+  (let ((tbs (make-x509-tbs-cert-list
+	      (make-der-integer 1) #f
+	      (x509-certificate-revocation-list-builder-issuer builder)
+	      (x509-certificate-revocation-list-builder-this-update builder)
+	      (x509-certificate-revocation-list-builder-next-update builder)
+	      (make-der-sequence
+	       (x509-certificate-revocation-list-builder-revoked-certificates
+		builder))
+	      (x509-certificate-revocation-list-builder-extensions builder))))
+    (x509-certificate-revocation-list:sign
+     (make-x509-certificate-revocation-list
+      (make-x509-certificate-list tbs #f #f)) private-key)))
 
 ;; Misc
 (define describe-x509-certificate
