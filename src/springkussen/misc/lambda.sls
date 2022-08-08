@@ -81,12 +81,15 @@
 	(e)))
     (define (parse-formals vars)
       (syntax-case vars ()
-	(() '())
+	(() #'())
 	(((v pred) rest ...)
 	 (with-syntax ((r (parse-pred #'pred))
 		       (msg (make-message #'v #'pred))
-		       ((t) (generate-temporaries '(v))))
-	   (cons #'(v (t r) msg) (parse-formals #'(rest ...)))))
+		       ((t) (generate-temporaries '(v)))
+		       ((rest ...) (parse-formals #'(rest ...))))
+	   #'((v (t r) msg) rest ...)))
+	((v rest ...)
+	 #'((v (t #f) "") rest ...))
 	(v (syntax-violation 'lambda/typed "Invalid formals"
 			     (syntax->datum #'v)))))
     (syntax-case x ()
@@ -94,7 +97,7 @@
        (with-syntax ((((v (p pred) msg) ...) (parse-formals #'(vars ...))))
 	 #'(let ((p pred) ...)
 	     (lambda (v ... . rest)
-	       (unless (p v)
+	       (unless (or (not p) (p v))
 		 (springkussen-assertion-violation #f msg v))
 	       ...
 	       (let () ;; wrap with let for internal defines
@@ -107,16 +110,22 @@
 (define-syntax case-lambda/typed
   ;; lazy implementation...
   (syntax-rules ()
+    ((_ "clause" (clause ...) (((v p) ...) b0 b1 ...) next ...)
+     (case-lambda/typed "clause"
+	(clause ...
+		((v ... . r)
+		 ((lambda/typed ((v p) ... . r) b0 b1 ...) v ...)))
+	next ...))
     ((_ "clause" (clause ...) (((v p) ... . r) b0 b1 ...) next ...)
      (case-lambda/typed "clause"
-      (clause ...
-	      ((v ... . r)
-	       (apply (lambda/typed ((v p) ... . r) b0 b1 ...) v ... r)))
-      next ...))
+	(clause ...
+		((v ... . r)
+		 (apply (lambda/typed ((v p) ... . r) b0 b1 ...) v ... r)))
+	next ...))
     ((_ "clause" (clause ...) (args body0 body1 ...) rest ...)
      (case-lambda/typed "clause"
-      (clause ... (args body0 body1 ...))
-      rest ...))
+			(clause ... (args body0 body1 ...))
+			rest ...))
     ((_ "clause" (clause ...))
      (case-lambda clause ...))
     ((_ clause* ...)
