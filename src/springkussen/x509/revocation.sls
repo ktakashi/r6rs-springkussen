@@ -195,13 +195,18 @@
 			     (signature (or #f der-bit-string?)))
 		((n x509-certificate-list->asn1-object)
 		 tbs-cert-list signature-algorithm signature)))))
+(define/typed (x509-certificate-list:signed? (cl x509-certificate-list?))
+  (let ((sa (x509-certificate-list-signature-algorithm cl))
+	(sig (x509-certificate-list-signature-value cl)))
+    (and sa sig)))
+
 (define (x509-certificate-list->asn1-object self)
-  (let ((sa (x509-certificate-list-signature-algorithm self))
-	(sig (x509-certificate-list-signature-value self)))
-    (unless (and sa sig)
-      (springkussen-assertion-violation 'x509-certificate-list->asn1-object
-					"CertificateList is not signed"))
-    (der-sequence (x509-certificate-list-tbs-cert-list self) sa sig)))
+  (unless (x509-certificate-list:signed? self)
+    (springkussen-assertion-violation 'x509-certificate-list->asn1-object
+				      "CertificateList is not signed"))
+  (der-sequence (x509-certificate-list-tbs-cert-list self)
+		(x509-certificate-list-signature-algorithm self)
+		(x509-certificate-list-signature-value self)))
 
 (define (asn1-object->x509-certificate-list asn1-object)
   (unless (der-sequence? asn1-object)
@@ -224,14 +229,17 @@
 	      (case-lambda/typed
 	       (((cl x509-certificate-list?))
 		((n x509-certificate-revocation-list-sequence)
-		 (x509-certificate-list->asn1-object cl) cl))
+		 (and (x509-certificate-list:signed? cl)
+		      (x509-certificate-list->asn1-object cl))
+		 cl))
 	       (((sequence der-sequence?)
 		 (cl x509-certificate-list?))
 		((n x509-certificate-revocation-list-sequence) sequence cl))))))
 
 (define (asn1-object->x509-certificate-revocation-list asn1-object)
-  (make-x509-certificate-revocation-list asn1-object
-    (asn1-object->x509-certificate-list asn1-object)))
+  (make-x509-certificate-revocation-list 
+   (asn1-object->x509-certificate-list asn1-object)
+   asn1-object))
 
 (define read-x509-certificate-revocation-list
   (case-lambda
