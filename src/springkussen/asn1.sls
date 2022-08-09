@@ -35,7 +35,9 @@
 	    
 	    asn1-encodable-object? <asn1-encodable-object>
 	    asn1-encodable-object->asn1-object
-
+	    simple-asn1-encodable-object->der-sequence
+	    simple-asn1-encodable-object->der-set
+	    
 	    asn1-simple-object? asn1-simple-object-value
 	    
 	    der-boolean? make-der-boolean der-boolean-value

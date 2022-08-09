@@ -68,7 +68,7 @@
 	 (identifier? #'p)
 	 #'p)
 	;; evaludate :)
-	((p ...) #'(let ((t (p ...))) (lambda (v) (t v))))
+	((p ...) #'(lambda (v) (let ((t (p ...))) (t v))))
 	;; compare with equal?
 	((quote p) #'(lambda (v) (equal? v p)))))
     (define (make-message v pred)
@@ -95,14 +95,14 @@
     (syntax-case x ()
       ((_ (vars ... . rest) body0 body* ...)
        (with-syntax ((((v (p pred) msg) ...) (parse-formals #'(vars ...))))
-	 #'(let ((p pred) ...)
-	     (lambda (v ... . rest)
+	 #'(lambda (v ... . rest)
+	     (let ((p pred)) ;; let's hope the compiler does lambda lifting...
 	       (unless (or (not p) (p v))
-		 (springkussen-assertion-violation #f msg v))
-	       ...
-	       (let () ;; wrap with let for internal defines
-		 body0
-		 body* ...)))))
+		 (springkussen-assertion-violation #f msg v)))
+	     ...
+	     (let () ;; wrap with let for internal defines
+	       body0
+	       body* ...))))
       ((_ arg* body0 body* ...)
        (identifier? #'arg*)
        #'(lambda arg* body0 body* ...)))))

@@ -36,6 +36,8 @@
 	    asn1-encodable-object?
 	    (rename (asn1-encodable-object <asn1-encodable-object>))
 	    asn1-encodable-object->asn1-object
+	    simple-asn1-encodable-object->der-sequence
+	    simple-asn1-encodable-object->der-set
 
 	    asn1-simple-object? asn1-simple-object-value
 	    
@@ -183,7 +185,9 @@
 	    )
     (import (rnrs)
 	    (springkussen conditions)
-	    (springkussen misc bytevectors))
+	    (springkussen misc bytevectors)
+	    (springkussen misc lambda)
+	    (springkussen misc record))
 
 (define BOOLEAN			#x01)	;
 (define INTEGER			#x02)	;
@@ -223,6 +227,20 @@
   (fields converter))
 (define (asn1-encodable-object->asn1-object asn1-encodable)
   ((asn1-encodable-object-converter asn1-encodable) asn1-encodable))
+
+(define/typed (simple-asn1-encodable-object->der-sequence
+	       (asn1-encodable asn1-encodable-object?))
+  (let* ((rtd (record-rtd asn1-encodable))
+	 (accs (record-type-all-field-accessors rtd)))
+    (make-der-sequence 
+     (filter values (map (lambda (acc) (acc asn1-encodable)) (cdr accs))))))
+(define/typed (simple-asn1-encodable-object->der-set
+	       (asn1-encodable asn1-encodable-object?))
+  (let* ((rtd (record-rtd asn1-encodable))
+	 (accs (record-type-all-field-accessors rtd)))
+    (make-der-set
+     (filter values (map (lambda (acc) (acc asn1-encodable)) (cdr accs))))))
+
 
 ;; Simple value
 (define-record-type asn1-simple-object

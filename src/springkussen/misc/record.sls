@@ -29,10 +29,12 @@
 ;;;  
 
 #!r6rs
-;; The implementation is from aeolus, which is written by me :)
+;; The implementation is from Sagittarius which is written by me :)
 (library (springkussen misc record)
     (export make-record-builder from
-	    define-compositable-record-type)
+	    define-compositable-record-type
+	    record-type-all-field-name&accessors
+	    record-type-all-field-accessors)
     (import (rnrs)
 	    (springkussen conditions)
 	    (springkussen misc lists))
