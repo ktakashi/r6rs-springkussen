@@ -87,6 +87,8 @@
 	    SEQUENCE
 	    SEQUENCE-OF
 	    asn1-collection? asn1-collection-elements
+	    asn1-collection:find-tagged-object
+
 	    der-sequence? make-der-sequence
 	    (rename (der-sequence <der-sequence>)
 		    (%der-sequence der-sequence)
@@ -341,6 +343,13 @@
 (define-record-type asn1-collection
   (parent asn1-object)
   (fields (mutable elements)))
+
+(define/typed (asn1-collection:find-tagged-object
+	       (collection asn1-collection?) (tag-no integer?))
+  (find (lambda (o)
+	  (and (der-tagged-object? o)
+	       (= (der-tagged-object-tag-no o) tag-no)))
+	(asn1-collection-elements collection)))
 
 ;; Sequence
 (define-record-type der-sequence

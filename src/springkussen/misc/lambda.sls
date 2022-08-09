@@ -113,8 +113,8 @@
     ((_ "clause" (clause ...) (((v p) ...) b0 b1 ...) next ...)
      (case-lambda/typed "clause"
 	(clause ...
-		((v ... . r)
-		 ((lambda/typed ((v p) ... . r) b0 b1 ...) v ...)))
+		((v ...)
+		 ((lambda/typed ((v p) ...) b0 b1 ...) v ...)))
 	next ...))
     ((_ "clause" (clause ...) (((v p) ... . r) b0 b1 ...) next ...)
      (case-lambda/typed "clause"

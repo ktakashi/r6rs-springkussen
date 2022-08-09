@@ -45,6 +45,7 @@
 	    cms-signed-data-crls
 	    cms-signed-data-signer-infos
 	    cms-signed-data->content-info
+	    asn1-object->cms-content-info
 
 	    cms-encapsulated-content-info? make-cms-encapsulated-content-info
 	    cms-encapsulated-content-info-e-content-type
@@ -181,7 +182,8 @@
 	    cms-other-key-attribute? make-cms-other-key-attribute
 	    cms-other-key-attribute-key-attr-id
 	    cms-other-key-attribute-key-attr
-	    )
+	    
+	    cms-content-handler)
     (import (rnrs)
 	    (springkussen asn1)
 	    (springkussen conditions)
@@ -202,9 +204,36 @@
 	  content)
   (protocol (lambda (n)
 	      (lambda/typed ((content-type der-object-identifier?)
-			     (content asn1-object?))
-		((n simple-asn1-encodable-object->der-sequence)
-		 content-type content)))))
+			     (content (or #f asn1-object?)))
+		((n cms-content-info->asn1-object) content-type content)))))
+(define (cms-content-info->asn1-object self)
+  (make-der-sequence
+   (filter values (list (cms-content-info-content-type self)
+			(cond ((cms-content-info-content self) =>
+			       (lambda (c) (make-der-tagged-object 0 #t c)))
+			      (else #f))))))
+(define/typed (asn1-object->cms-content-info (asn1-object der-sequence?)
+					     content-handler)
+  (let ((e (asn1-collection-elements asn1-object)))
+    (unless (= (length e) 2)
+      (springkussen-assertion-violation 'asn1-object->cms-content-info
+					"Invalid format" asn1-object))
+    (let ((ct (car e)) (c (cadr e)))
+      (unless (or (not c)
+		  (and (der-tagged-object? c)
+		       (= (der-tagged-object-tag-no c) 0)))
+	(springkussen-assertion-violation 'asn1-object->cms-content-info
+					  "Invalid format" asn1-object))
+      (if c
+	  (let ((content (content-handler ct (der-tagged-object-obj c))))
+	    (make-cms-content-info ct content))
+	  (make-cms-content-info ct c)))))
+
+;;;; 4.  Data Content Type
+(define (data-content-handler ct content)
+  (and (string=? "1.2.840.113549.1.7.1" (der-object-identifier-value ct))
+       (and (der-octet-string? content))
+       content))
 
 ;;;; 5 Signed-data Content Type
 ;;; 5.1 SignedData Type
@@ -263,9 +292,19 @@
 			      (else #f))
 			(cms-signed-data-signer-infos self)))))
 
+(define/typed (asn1-object->cms-signed-data (content der-sequence?))
+  (springkussen-assertion-violation 'asn1-object->cms-signed-data
+				    "Not supported yet"))
+
 (define/typed (cms-signed-data->content-info (sd cms-signed-data?))
   (make-cms-content-info
    (make-der-object-identifier "1.2.840.113549.1.7.2") sd))
+
+(define (signed-data-content-handler ct content)
+  (and (string=? "1.2.840.113549.1.7.2" (der-object-identifier-value ct))
+       (and (der-sequence? content))
+       (asn1-object->cms-signed-data content)))
+
 
 ;;; 5.2 EncapsulatedContentInfo Type
 ;; EncapsulatedContentInfo ::= SEQUENCE {
@@ -487,6 +526,18 @@
 		 (cond ((cms-encrypted-content-info-encrypted-content self) =>
 			(lambda (c) (make-der-tagged-object 0 #f c)))
 		       (else #f))))))
+
+(define/typed (asn1-object->cms-encrypted-content-info
+	       (asn1-object der-sequence?))
+  (let ((e (asn1-collection-elements asn1-object)))
+    (when (< (length e) 2)
+      (springkussen-assertion-violation 'asn1-object->cms-encrypted-content-info
+					"Invalid format"))
+    (let ((content (asn1-collection:find-tagged-object asn1-object 0)))
+      (make-cms-encrypted-content-info
+       (car e)
+       (asn1-object->algorithm-identifier (cadr e))
+       (and content (der-tagged-object-obj content))))))
 
 ;;; 6.2. RecipientInfo Type
 ;; RecipientInfo ::= CHOICE {
@@ -811,11 +862,17 @@
   (parent <asn1-encodable-object>)
   (fields version encrypted-content-info unprotected-attrs)
   (protocol (lambda (n)
+	      (define (check-version version attrs)
+		(or (and attrs (= (der-integer-value version) 2))
+		    (and (not attrs) (= (der-integer-value version) 0))))
 	      (lambda/typed ((version der-integer?)
 			     (encrypted-content-info
 			      cms-encrypted-content-info?)
 			     (unprotected-attrs
 			      (or #f (der-set-of? cms-attribute?))))
+	        (unless (check-version version unprotected-attrs)
+		  (springkussen-assertion-violation 'make-cms-encrypted-data
+		    "Version must be 0 if attrs is not present, or 2 if attrs is present"))
 	        ((n cms-encrypted-data->asn1-object)
 		 version encrypted-content-info unprotected-attrs)))))
 (define (cms-encrypted-data->asn1-object self)
@@ -826,9 +883,25 @@
 		 (cond ((cms-encrypted-data-unprotected-attrs self) =>
 			(lambda (c) (make-der-tagged-object 0 #f c)))
 		       (else #f))))))
+(define/typed (asn1-object->cms-encrypted-data (asn1-object der-sequence?))
+  (let ((e (asn1-collection-elements asn1-object)))
+    (when (< (length e) 2)
+      (springkussen-assertion-violation 'asn1-object->cms-encrypted-data
+					"Invalid format" asn1-object))
+    (let ((attrs (asn1-collection:find-tagged-object asn1-object 0)))
+      (make-cms-encrypted-data
+       (car e)
+       (asn1-object->cms-encrypted-content-info (cadr e))
+       (and attrs (der-tagged-object-obj attrs))))))
+
 (define/typed (cms-encrypted-data->content-info (ed cms-encrypted-data?))
   (make-cms-content-info
    (make-der-object-identifier "1.2.840.113549.1.7.6") ed))
+
+(define (encrypted-data-content-handler ct content)
+  (and (string=? "1.2.840.113549.1.7.6" (der-object-identifier-value ct))
+       (and (der-sequence? content))
+       (asn1-object->cms-encrypted-data content)))
 
 ;;;; 9.    Authenticated-data Content Type
 ;;;  9.1.  AuthenticatedData Type
@@ -929,5 +1002,11 @@
 			     (key-attr (or #f asn1-object?)))
 	       ((n simple-asn1-encodable-object->der-sequence) 
 		key-attr-id key-attr)))))
+
+(define/typed (cms-content-handler (ct der-object-identifier?)
+				   (content asn1-object?))
+  (or (data-content-handler ct content)
+      (signed-data-content-handler ct content)
+      (encrypted-data-content-handler ct content)))
   
 )

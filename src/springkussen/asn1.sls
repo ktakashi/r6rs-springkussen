@@ -71,6 +71,8 @@
 	    bytevector->der-enumerated
 
 	    asn1-collection? asn1-collection-elements
+	    asn1-collection:find-tagged-object
+
 	    der-sequence? make-der-sequence <der-sequence>
 	    der-sequence der-sequence-elements
 	    der-sequence-of?
