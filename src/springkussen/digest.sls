@@ -50,7 +50,8 @@
 		    (sha384-descriptor     *digest:sha384*)
 		    (sha512-descriptor     *digest:sha512*)
 		    (sha512/224-descriptor *digest:sha512/224*)
-		    (sha512/256-descriptor *digest:sha512/256*)))
+		    (sha512/256-descriptor *digest:sha512/256*))
+	    *supporting-digests*)
     (import (rnrs)
 	    (springkussen conditions)
 	    (springkussen digest descriptor)
@@ -58,6 +59,16 @@
 	    (springkussen digest sha1)
 	    (springkussen digest sha256)
 	    (springkussen digest sha512))
+
+(define *supporting-digests*
+  (list md5-descriptor
+	sha1-descriptor
+	sha224-descriptor
+	sha256-descriptor
+	sha384-descriptor
+	sha512-descriptor
+	sha512/224-descriptor
+	sha512/256-descriptor))
 
 (define-record-type digester
   (fields (mutable state)
