@@ -60,7 +60,8 @@
   (define kdf (or (pbe-cipher-parameter-kdf param #f) (make-pbkdf-2 #f)))
   (define iteration (pbe-cipher-parameter-iteration param *default-iteration*))
   (define dk-len
-    (select-key-length (symmetric-scheme-descriptor-key-length* scheme)))
+    (or (pbe-cipher-parameter-key-size param #f)
+	(select-key-length (symmetric-scheme-descriptor-key-length* scheme))))
   (unless (string? password)
     (springkussen-assertion-violation 'pbes2-init "Password must be a string"))
   (let* ((dk (kdf (string->utf8 password) salt iteration dk-len))

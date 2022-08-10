@@ -57,6 +57,11 @@
 
 	    make-pbkdf-1
 	    make-pbe-kdf-digest-parameter pbe-kdf-digest-parameter?
+	    pbe-kdf-parameter-md ;; needed for PKCS12...
+
+	    make-pbe-cipher-key-size-parameter pbe-cipher-key-size-parameter?
+	    pbe-cipher-parameter-key-size ;; needed for PKCS12...
+	    
 	    
 	    make-pbkdf-2
 	    make-pbe-kdf-prf-parameter pbe-kdf-prf-parameter?

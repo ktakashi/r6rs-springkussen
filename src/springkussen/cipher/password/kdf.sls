@@ -35,6 +35,7 @@
 
 	    make-pbkdf-1
 	    make-pbe-kdf-digest-parameter pbe-kdf-digest-parameter?
+	    pbe-kdf-parameter-md
 	    
 	    make-pbkdf-2
 	    make-pbe-kdf-prf-parameter pbe-kdf-prf-parameter?

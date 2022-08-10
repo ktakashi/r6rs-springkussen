@@ -42,6 +42,9 @@
 	    make-pbe-cipher-kdf-parameter pbe-cipher-kdf-parameter?
 	    pbe-cipher-parameter-kdf
 
+	    make-pbe-cipher-key-size-parameter pbe-cipher-key-size-parameter?
+	    pbe-cipher-parameter-key-size
+	    
 	    make-pbe-cipher-salt-parameter pbe-cipher-salt-parameter?
 	    pbe-cipher-parameter-salt
 
@@ -63,6 +66,10 @@
 (define-pbe-parameter pbe-cipher-kdf-parameter
   make-pbe-cipher-kdf-parameter pbe-cipher-kdf-parameter?
   (kdf pbe-cipher-parameter-kdf))
+
+(define-pbe-parameter pbe-cipher-key-size-parameter
+  make-pbe-cipher-key-size-parameter pbe-cipher-key-size-parameter?
+  (key-size pbe-cipher-parameter-key-size))
 
 (define-pbe-parameter pbe-cipher-salt-parameter
   make-pbe-cipher-salt-parameter pbe-cipher-salt-parameter?

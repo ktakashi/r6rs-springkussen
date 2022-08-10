@@ -49,20 +49,19 @@
 (define (pbes1-init scheme op password param)
   (define salt (pbe-cipher-parameter-salt param))
   (define block-size (symmetric-scheme-descriptor-block-size scheme))
-  (define salt-len block-size)
-  (define dk-len block-size)
+  (define dk-len (pbe-cipher-parameter-key-size param block-size))
   (define kdf (or (pbe-cipher-parameter-kdf param #f) (make-pbkdf-1 #f)))
   (define iteration (pbe-cipher-parameter-iteration param *default-iteration*))
+
   (unless (string? password)
     (springkussen-assertion-violation 'pbes1-init "Password must be a string"))
-  (let ((dk (kdf (string->utf8 password) salt iteration (* block-size 2))))
+  (let ((dk (kdf (string->utf8 password) salt iteration (+ dk-len block-size))))
     (let-values (((k iv) (bytevector-split-at* dk dk-len)))
       (let* ((cipher-spec (symmetric-cipher-spec-builder
 			   (scheme scheme)
 			   (mode *mode:cbc*)))
 	     (cipher (make-symmetric-cipher cipher-spec)))
-	(symmetric-cipher:init! cipher
-				op
+	(symmetric-cipher:init! cipher op
 				(make-symmetric-key k)
 				(make-iv-paramater iv))
 	(make-pbes1-state cipher)))))
