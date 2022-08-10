@@ -53,9 +53,11 @@
 	    (else
 	     (let-values (((tag constructed? len) (read-tag&length in b)))
 	       (cond (len
-		      (let ((data (get-bytevector-n in len)))
+		      (let* ((s (position in))
+			     (data (get-bytevector-n in len)))
 			(when (< (bytevector-length data) len)
-			  (springkussen-error 'tlv-parser "Corrupted data"))
+			  (springkussen-error 'tlv-parser "Corrupted data"
+			   `(length ,len) `(start ,s) `(end ,(position in))))
 			(if constructed?
 			    (builder b tag
 			     (call-with-port (open-bytevector-input-port data)
@@ -65,7 +67,7 @@
 			    (builder b tag data #f))))
 		     ((not constructed?)
 		      (springkussen-error 'tlv-parser "Indefinite length found"
-					  tag))
+					  tag `(pos ,(position in))))
 		     (else (handle-indefinite b tag in))))))))
   (lambda (in) (tlv-parser in #f)))
 
@@ -77,7 +79,8 @@
 	  (let ((b2 (get-u8 in)))
 	    (when (zero? (bitwise-and b2 #x7F))
 	      (springkussen-error 'read-tag
-	       "Corrupted stream - invalid high tag number found" b2))
+	       "Corrupted stream - invalid high tag number found" b2
+	       `(pos ,(position in))))
 	    (do ((b3 b2 (get-u8 in)))
 		((or (eof-object? b3) (zero? (bitwise-and b3 #x80)))
 		 (when (eof-object? b3)
@@ -102,5 +105,7 @@
   (let ((tag (read-tag in b)))
     (values tag (not (zero? (bitwise-and #x20 b))) (read-length in))))
 
+(define (position in)
+  (and (port-has-port-position? in) (port-position in)))
 )
 
