@@ -28,13 +28,13 @@
 ;;;   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;
 
-
 ;; ref: https://datatracker.ietf.org/doc/html/rfc5652
 #!r6rs
 (library (springkussen cms types)
     (export cms-content-info? make-cms-content-info
 	    cms-content-info-content-type
 	    cms-content-info-content
+	    asn1-object->cms-content-info
 
 	    ;; 5 Signed-data Content Type
 	    cms-signed-data? make-cms-signed-data
@@ -45,7 +45,6 @@
 	    cms-signed-data-crls
 	    cms-signed-data-signer-infos
 	    cms-signed-data->content-info
-	    asn1-object->cms-content-info
 
 	    cms-encapsulated-content-info? make-cms-encapsulated-content-info
 	    cms-encapsulated-content-info-e-content-type
@@ -212,22 +211,25 @@
 			(cond ((cms-content-info-content self) =>
 			       (lambda (c) (make-der-tagged-object 0 #t c)))
 			      (else #f))))))
-(define/typed (asn1-object->cms-content-info (asn1-object der-sequence?)
-					     content-handler)
-  (let ((e (asn1-collection-elements asn1-object)))
-    (unless (= (length e) 2)
-      (springkussen-assertion-violation 'asn1-object->cms-content-info
-					"Invalid format" asn1-object))
-    (let ((ct (car e)) (c (cadr e)))
-      (unless (or (not c)
-		  (and (der-tagged-object? c)
-		       (= (der-tagged-object-tag-no c) 0)))
+(define asn1-object->cms-content-info
+  (case-lambda/typed
+   ((asn1-object)
+    (asn1-object->cms-content-info asn1-object cms-content-handler))
+   (((asn1-object der-sequence?) content-handler)
+    (let ((e (asn1-collection-elements asn1-object)))
+      (unless (= (length e) 2)
 	(springkussen-assertion-violation 'asn1-object->cms-content-info
 					  "Invalid format" asn1-object))
-      (if c
-	  (let ((content (content-handler ct (der-tagged-object-obj c))))
-	    (make-cms-content-info ct content))
-	  (make-cms-content-info ct c)))))
+      (let ((ct (car e)) (c (cadr e)))
+	(unless (or (not c)
+		    (and (der-tagged-object? c)
+			 (= (der-tagged-object-tag-no c) 0)))
+	  (springkussen-assertion-violation 'asn1-object->cms-content-info
+					    "Invalid format" asn1-object))
+	(if c
+	    (let ((content (content-handler ct (der-tagged-object-obj c))))
+	      (make-cms-content-info ct content))
+	    (make-cms-content-info ct c)))))))
 
 ;;;; 4.  Data Content Type
 (define (data-content-handler ct content)
