@@ -2,6 +2,7 @@
 	(springkussen conditions)
 	(springkussen cipher symmetric scheme aes)
 	(springkussen cipher symmetric scheme des)
+	(springkussen cipher symmetric scheme rc2)
 	(springkussen cipher symmetric scheme rc5)
 	(springkussen cipher symmetric scheme descriptor)
 	(springkussen cipher symmetric mode cbc)
@@ -30,6 +31,7 @@
 (define (test-cbc scheme vec)
   (define param (construct-parameter scheme (vector-ref vec 4)))
   (define block-size (symmetric-scheme-descriptor-block-size scheme))
+
   (let ((key (integer->bytevector (vector-ref vec 1) (vector-ref vec 0)))
 	(pt (integer->bytevector (vector-ref vec 2) block-size))
 	(ct (integer->bytevector (vector-ref vec 3) block-size)))
@@ -106,6 +108,7 @@
     ))
 (for-each (lambda (v) (test-cbc aes-256-descriptor v)) test-aes-256-vector)
 
-
 (test-end)
 (exit (zero? (test-runner-fail-count (test-runner-current))))
+
+

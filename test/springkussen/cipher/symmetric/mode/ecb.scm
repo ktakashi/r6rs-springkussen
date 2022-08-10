@@ -32,7 +32,6 @@
 			       (number->string (vector-ref vec 3) 16))
 		ct
 		(encrypt skey pt))
-    
     (test-equal (string-append "decrypt: (" 
 			       (number->string (vector-ref vec 0))
 			       ") "
@@ -243,7 +242,9 @@
   '(
     #(8  #x3000000000000000 #x1000000000000001 #x30649edf9be7d2c2)
     #(16 #x88bca90e90875a7f0f79c384627bafb2 #x0000000000000000 #x2269552ab0f85ca6)
+    #(5 #x261E578EC9 #x1122334455667788 #x8270BE73E36295E0)
     ))
+
 (for-each (lambda (v) (test-ecb rc2-descriptor v)) test-rc2-vectors)
 
 (test-end)

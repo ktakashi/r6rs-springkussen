@@ -99,8 +99,8 @@
 	  (let ((b (decrypt key ct (+ i cs) pt (+ i ps))))
 	    (unless (= b blocklen)
 	      (springkussen-error 'decrypt "invalid decryption"))
-	    (bytevector-xor! pt i iv 0 blocklen)
-	    (bytevector-xor! iv 0 ct i blocklen)
+	    (bytevector-xor! pt (+ i ps) iv 0 blocklen)
+	    (bytevector-copy! ct (+ i cs) iv 0 blocklen)
 	    (loop (+ i blocklen)))))))
 
 (define (cbc-done cbc)

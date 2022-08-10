@@ -148,6 +148,7 @@
 
 (define rc5-descriptor
   (symmetric-scheme-descriptor-builder
+   (name "RC5")
    (key-length* '(8 . 128))
    (block-size 8)
    (default-round 12)

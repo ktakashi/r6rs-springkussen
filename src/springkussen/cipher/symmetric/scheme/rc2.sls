@@ -67,11 +67,10 @@
 	   (i (- 128 T8))
 	   (tv (u8ref tmp i)))
       (bytevector-u8-set! tmp i (u8ref permute (bitwise-and tv TM)))
-      (do ((i (- i 1) (- i 1)))
+      (do ((i (- 127 T8) (- i 1)))
 	  ((< i 0))
-	(let ((v (bytevector-u8-ref permute
-				    (bitwise-xor (u8ref tmp (+ i 1))
-						 (u8ref tmp (+ i T8))))))
+	(let ((v (u8ref permute (bitwise-xor (u8ref tmp (+ i 1))
+					     (u8ref tmp (+ i T8))))))
 	  (bytevector-u8-set! tmp i v))))
     ;; copy to xkay in little endian
     (do ((i 0 (+ i 1)))
@@ -162,7 +161,8 @@
 
 (define rc2-descriptor
   (symmetric-scheme-descriptor-builder
-   (key-length* '(8 . 128))
+   (name "RC2")
+   (key-length* '(5 . 128)) ;; min 5 for RC2 40bits
    (block-size 8)
    (default-round 16)
    (setupper rc2-setup)
