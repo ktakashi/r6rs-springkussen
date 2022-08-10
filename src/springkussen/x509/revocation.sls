@@ -237,9 +237,8 @@
 		((n x509-certificate-revocation-list-sequence) sequence cl))))))
 
 (define (asn1-object->x509-certificate-revocation-list asn1-object)
-  (make-x509-certificate-revocation-list 
-   (asn1-object->x509-certificate-list asn1-object)
-   asn1-object))
+  (make-x509-certificate-revocation-list asn1-object
+   (asn1-object->x509-certificate-list asn1-object)))
 
 (define read-x509-certificate-revocation-list
   (case-lambda
