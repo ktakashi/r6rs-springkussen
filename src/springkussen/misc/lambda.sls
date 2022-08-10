@@ -89,7 +89,8 @@
 		       ((rest ...) (parse-formals #'(rest ...))))
 	   #'((v (t r) msg) rest ...)))
 	((v rest ...)
-	 #'((v (t #f) "") rest ...))
+	 (with-syntax (((rest ...) (parse-formals #'(rest ...))))
+	   #'((v (t #f) "") rest ...)))
 	(v (syntax-violation 'lambda/typed "Invalid formals"
 			     (syntax->datum #'v)))))
     (syntax-case x ()
@@ -107,29 +108,41 @@
        (identifier? #'arg*)
        #'(lambda arg* body0 body* ...)))))
 
+;; TODO it's a lazy implementation assuming some lambda lifting
+;;      is done by compilers...
 (define-syntax case-lambda/typed
-  ;; lazy implementation...
-  (syntax-rules ()
-    ((_ "clause" (clause ...) (((v p) ...) b0 b1 ...) next ...)
-     (case-lambda/typed "clause"
-	(clause ...
-		((v ...)
-		 ((lambda/typed ((v p) ...) b0 b1 ...) v ...)))
-	next ...))
-    ((_ "clause" (clause ...) (((v p) ... . r) b0 b1 ...) next ...)
-     (case-lambda/typed "clause"
-	(clause ...
-		((v ... . r)
-		 (apply (lambda/typed ((v p) ... . r) b0 b1 ...) v ... r)))
-	next ...))
-    ((_ "clause" (clause ...) (args body0 body1 ...) rest ...)
-     (case-lambda/typed "clause"
-			(clause ... (args body0 body1 ...))
-			rest ...))
-    ((_ "clause" (clause ...))
-     (case-lambda clause ...))
-    ((_ clause* ...)
-     (case-lambda/typed "clause" () clause* ...))))
-						   
+  (lambda (x)
+    (define (parse-formals vars)
+      (syntax-case vars ()
+	(() #'())
+	(((v pred) rest ...)
+	 (with-syntax (((rest ...) (parse-formals #'(rest ...))))
+	   #'(v rest ...)))
+	((v rest ...)
+	 (identifier? #'v)
+	 (with-syntax (((rest ...) (parse-formals #'(rest ...))))
+	   #'(v rest ...)))
+	(v (syntax-violation 'case-lambda/typed
+			     "Invalid formals"
+			     (syntax->datum #'v)
+			     (syntax->datum vars)))))
+    (syntax-case x ()
+      ((k "parse" (clause* ...) ()) #'(case-lambda clause* ...))
+      ((k "parse" (clause* ...) (((vars ...) body* ...) rest ...))
+       (with-syntax (((v ...) (parse-formals #'(vars ...))))
+	 #'(k "parse"
+	      (clause* ...
+		       ((v ...) ((lambda/typed (vars ...) body* ...) v ...)))
+	      (rest ...))))
+      ((k "parse" (clause* ...) (((vars ... . r) body* ...) rest ...))
+       (with-syntax (((v ...) (parse-formals #'(vars ...))))
+	 #'(k "parse"
+	      (clause* ... ((v ... . r)
+			    (apply (lambda/typed (vars ... . r) body* ...)
+				   v ... r)))
+	      (rest ...))))
+      ((k (vars body0 body* ...) rest ...)
+       #'(k "parse" () ((vars body0 body* ...) rest ...))))))
+
 )
 
