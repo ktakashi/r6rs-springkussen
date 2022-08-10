@@ -320,7 +320,7 @@
 ;; BMP string
 (define (write-der-bmp-string dvs output)
   (write-der-encoded BMP-STRING
-   (string->utf8 (der-bmp-string-value dvs)) output))
+   (string->utf16 (der-bmp-string-value dvs) (endianness big)) output))
 
 ;; UTF8 string
 (define (write-der-utf8-string dvs output)

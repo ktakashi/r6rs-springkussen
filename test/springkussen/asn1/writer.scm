@@ -118,7 +118,7 @@
 		  (make-der-universal-string "ABCD EF$"))
 
 ;; BMP string
-(test-asn1-writer #vu8(30 8 65 66 67 68 32 69 70 36)
+(test-asn1-writer #vu8(30 16 0 65 0 66 0 67 0 68 0 32 0 69 0 70 0 36)
 		  (make-der-bmp-string "ABCD EF$"))
 
 ;; UTF8 string

@@ -269,8 +269,8 @@
   (parent asn1-simple-object))
 (define make-bytevector->asn1-string
   (case-lambda
-   ((ctr) (lambda (bv) (ctr (utf8->string bv))))
-   ((ctr transcoder) (lambda (bv) (ctr (bytevector->string bv transcoder))))))
+   ((ctr) (make-bytevector->asn1-string ctr utf8->string))
+   ((ctr conv) (lambda (bv) (ctr (conv bv))))))
 
 ;; Bit string
 (define-record-type der-bit-string
@@ -443,7 +443,8 @@
 (define-record-type der-bmp-string
   (parent asn1-string))
 (define bytevector->der-bmp-string
-  (make-bytevector->asn1-string make-der-bmp-string))
+  (make-bytevector->asn1-string make-der-bmp-string
+    (lambda (bv) (utf16->string bv (endianness big)))))
 
 ;; UTF8-STRING
 (define-record-type der-utf8-string
