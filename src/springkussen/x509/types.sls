@@ -234,27 +234,27 @@
   (fields algorithm
 	  parameters)
   (protocol (lambda (n)
-	      (lambda (oid param)
+	      (case-lambda
+	       ((oid)
+		(unless (der-object-identifier? oid)
+		  (springkussen-assertion-violation 'make-algorithm-identifier
+						    "OID required" oid))
+		((n simple-asn1-encodable-object->der-sequence) oid #f))
+	       ((oid param)
 		(unless (der-object-identifier? oid)
 		  (springkussen-assertion-violation 'make-algorithm-identifier
 						    "OID required" oid))
 		(unless (asn1-object? param)
 		  (springkussen-assertion-violation 'make-algorithm-identifier
 		    "ASN1 object required" param))
-		((n algorithm-identifier->asn1-object) oid param)))))
-(define (algorithm-identifier->asn1-object self)
-  (der-sequence
-   (algorithm-identifier-algorithm self)
-   (algorithm-identifier-parameters self)))
+		((n simple-asn1-encodable-object->der-sequence) oid param))))))
+
 (define (asn1-object->algorithm-identifier asn1-object)
   (unless (der-sequence? asn1-object)
     (springkussen-assertion-violation 'asn1-object->algorithm-identifier
 				      "Invalid format" asn1-object))
   (let ((e (asn1-collection-elements asn1-object)))
-    (unless (= (length e) 2)
-      (springkussen-assertion-violation 'asn1-object->algorithm-identifier
-					"Invalid format" asn1-object))
-    (make-algorithm-identifier (car e) (cadr e))))
+    (apply make-algorithm-identifier e)))
 
 ;; SubjectPublicKeyInfo  ::=  SEQUENCE  {
 ;;      algorithm            AlgorithmIdentifier,
