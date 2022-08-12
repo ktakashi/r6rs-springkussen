@@ -19,31 +19,6 @@ See [./doc/overview.md](./doc/overview.md)
 If you are interested in enhancing the library, please also refer the
 implementation note: [Implementation notes](./notes.md)
 
-Design
-------
-
-Memo for me.
-
-### Directory structure (plan)
-
-- src
-  - springkussen
-    - conditions
-	- asn1
-	- misc
-	  - base64
-	- math
-    - cipher
-	  - symmetric
-	    - scheme
-	    - mode
-	  - asymmetric
-	- digest
-	- mac
-	- pkcs
-- test
-- doc
-
 
 Symmetric ciphers
 -----------------
@@ -183,4 +158,5 @@ In this library, the following X.509 related formats are supported
 
 - [x] X.509 Certificate
 - [x] X.509 Certificate Signing Request
+- [x] X.509 Certificate Revocation List
 
