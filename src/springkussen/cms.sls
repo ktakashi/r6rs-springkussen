@@ -184,18 +184,48 @@
 	    cms-content-handler
 
 	    ;; operations
+	    cms-data-content-info?
+	    cms-data-content-info:content
+
 	    cms-encrypted-data-content-info?
 	    cms-enctypted-data-content-info:encryption-algorithm
 	    cms-enctypted-data-content-info:decrypt-content
 	    
 	    cms-encrypted-data:encryption-algorithm
-	    cms-encrypted-data:decrypt-content)
+	    cms-encrypted-data:decrypt-content
+
+	    ;; Asymmetric Key Package
+	    cms-one-asymmetric-key? make-cms-one-asymmetric-key
+	    cms-one-asymmetric-key-version
+	    cms-one-asymmetric-key-private-key-algorithm
+	    cms-one-asymmetric-key-private-key
+	    cms-one-asymmetric-key-attributes
+	    cms-one-asymmetric-key-public-key
+	    asn1-object->cms-one-asymmetric-key
+	    
+	    make-cms-private-key-info
+	    cms-private-key-info?
+	    asn1-object->cms-private-key-info
+
+	    cms-encrypted-private-key-info? make-cms-encrypted-private-key-info
+	    cms-encrypted-private-key-info-encryption-algorithm
+	    cms-encrypted-private-key-info-encrypted-data
+	    asn1-object->cms-encrypted-private-key-info)
     (import (rnrs)
 	    (springkussen asn1)
 	    (springkussen cms types)
+	    (springkussen cms akp)
 	    (springkussen cipher symmetric)
 	    (springkussen misc lambda))
 
+(define (cms-data-content-info? obj)
+  (and (cms-content-info? obj)
+       (der-octet-string? (cms-content-info-content obj))))
+(define/typed (cms-data-content-info:content
+	       (info cms-data-content-info?))
+  (cms-content-info-content info))
+
+  
 (define (cms-encrypted-data-content-info? obj)
   (and (cms-content-info? obj)
        (cms-encrypted-data? (cms-content-info-content obj))))
