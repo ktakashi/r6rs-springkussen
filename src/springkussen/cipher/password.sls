@@ -78,11 +78,36 @@
 
 	    symmetric-cipher-operation
 	    symmetric-cipher:init!
+	    symmetric-cipher:encrypt
 	    symmetric-cipher:encrypt!
+	    symmetric-cipher:encrypt-last-block
 	    symmetric-cipher:encrypt-last-block!
+	    symmetric-cipher:decrypt
 	    symmetric-cipher:decrypt!
+	    symmetric-cipher:decrypt-last-block
 	    symmetric-cipher:decrypt-last-block!
 	    symmetric-cipher:done!
+
+	    symmetric-scheme-descriptor?
+	    symmetric-scheme-descriptor-name
+	    symmetric-scheme-descriptor-block-size
+	    
+	    *scheme:aes*
+	    *scheme:aes-128*
+	    *scheme:aes-192*
+	    *scheme:aes-256*
+	    *scheme:des*
+	    *scheme:desede*
+	    *scheme:rc2*
+	    *scheme:rc5*
+
+	    *mode:ecb* *mode:cbc*
+
+	    make-cipher-parameter cipher-parameter?
+	    mode-parameter? 
+	    make-iv-paramater iv-parameter?
+
+	    pkcs7-padding no-padding
 	    )
     (import (rnrs)
 	    (springkussen conditions)
