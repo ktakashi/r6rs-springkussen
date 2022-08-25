@@ -94,6 +94,7 @@
 		    (%der-sequence der-sequence)
 		    (asn1-collection-elements der-sequence-elements))
 	    der-sequence-of?
+	    der-sequence->simple-asn1-encodable
 	    
 	    SET
 	    SET-OF
@@ -102,6 +103,7 @@
 		    (%der-set der-set)
 		    (asn1-collection-elements der-set-elements))
 	    der-set-of?
+	    der-set->simple-asn1-encodable
 	    
 	    NUMERIC-STRING
 	    der-numeric-string? make-der-numeric-string
@@ -359,6 +361,10 @@
   (lambda (v)
     (and (der-sequence? v)
 	 (for-all pred (asn1-collection-elements v)))))
+(define/typed (der-sequence->simple-asn1-encodable
+	       (sequence der-sequence?)
+	       (make procedure?))
+  (apply make (asn1-collection-elements sequence)))
 ;; Set
 (define-record-type der-set
   (parent asn1-collection))
@@ -367,6 +373,10 @@
   (lambda (v)
     (and (der-set? v)
 	 (for-all pred (asn1-collection-elements v)))))
+(define/typed (der-set->simple-asn1-encodable
+	       (set der-set?)
+	       (make procedure?))
+  (apply make (asn1-collection-elements set)))
 
 ;; Numeric string
 (define-record-type der-numeric-string

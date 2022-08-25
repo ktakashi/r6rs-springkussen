@@ -76,10 +76,12 @@
 	    der-sequence? make-der-sequence <der-sequence>
 	    der-sequence der-sequence-elements
 	    der-sequence-of?
+	    der-sequence->simple-asn1-encodable
 	    
 	    der-set? make-der-set <der-set>
 	    der-set der-set-elements
 	    der-set-of?
+	    der-set->simple-asn1-encodable
 	    
 	    der-numeric-string? make-der-numeric-string
 	    der-numeric-string-value

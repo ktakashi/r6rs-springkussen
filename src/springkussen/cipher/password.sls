@@ -69,8 +69,13 @@
 	    mac->pbkdf2-prf
 	    make-partial-hmac-parameter
 
-
 	    make-pbe-cipher
+
+	    pbe-parameter? make-pbe-parameter asn1-object->pbe-parameter
+	    pbes2-parameter? make-pbes2-parameter asn1-object->pbes2-parameter
+	    make-pbes2-encryption-scheme
+	    make-pbes2-kdf-parameter
+	    
 	    ;; re-export
 	    symmetric-cipher? 
 	    symmetric-cipher:encrypt-bytevector
@@ -101,7 +106,8 @@
 	    *scheme:rc2*
 	    *scheme:rc5*
 
-	    *mode:ecb* *mode:cbc*
+	    ;; PBE, as far as I know, only uses CBC.
+	    ;; *mode:ecb* *mode:cbc*
 
 	    make-cipher-parameter cipher-parameter?
 	    mode-parameter? 
@@ -110,18 +116,99 @@
 	    pkcs7-padding no-padding
 	    )
     (import (rnrs)
+	    (springkussen asn1)
 	    (springkussen conditions)
 	    (springkussen cipher symmetric)
 	    (springkussen cipher password kdf)
 	    (springkussen cipher password scheme descriptor)
 	    (springkussen cipher password scheme pbes1)
-	    (springkussen cipher password scheme pbes2))
+	    (springkussen cipher password scheme pbes2)
+	    (springkussen digest)
+	    (springkussen x509 types) ;; getting silly...
+	    (springkussen misc lambda))
 
 (define (make-pbe-cipher desc param)
   (define spec (symmetric-cipher-spec-builder
 		(scheme (pbe-cipher-parameter-encryption-scheme param))
 		(mode desc)))
   (make-symmetric-cipher spec))
+
+;; ASN.1 modules for PKCS#5
+;; PBEParameter ::= SEQUENCE {
+;;     salt OCTET STRING (SIZE(8)),
+;;     iterationCount INTEGER
+;; }
+;; We don't check the size as we accept AES or other block ciphers as well
+(define-record-type pbe-parameter
+  (parent <asn1-encodable-object>)
+  (fields salt iteration)
+  (protocol (lambda (n)
+	      (lambda/typed ((salt der-octet-string?)
+			     (iteration der-integer?))
+	       ((n simple-asn1-encodable-object->der-sequence) 
+		salt iteration)))))
+(define (asn1-object->pbe-parameter asn1-object)
+  (der-sequence->simple-asn1-encodable asn1-object make-pbe-parameter))
+
+
+;; PBES2-params ::= SEQUENCE {
+;;     keyDerivationFunc AlgorithmIdentifier {{PBES2-KDFs}},
+;;     encryptionScheme AlgorithmIdentifier {{PBES2-Encs}}
+;; }
+;;
+;; PBES2-KDFs ALGORITHM-IDENTIFIER ::=
+;;     { {PBKDF2-params IDENTIFIED BY id-PBKDF2}, ... }
+;;
+;;   PBES2-Encs ALGORITHM-IDENTIFIER ::= { ... }
+(define-record-type pbes2-parameter
+  (parent <asn1-encodable-object>)
+  (fields key-derivation encryption-scheme)
+  (protocol (lambda (n)
+	      (lambda/typed ((key-derivation algorithm-identifier?)
+			     (encryption-scheme algorithm-identifier?))
+	       ((n simple-asn1-encodable-object->der-sequence)
+		key-derivation encryption-scheme)))))
+(define/typed (asn1-object->pbes2-parameter (asn1-object der-sequence?))
+  (apply make-pbes2-parameter
+	 (map asn1-object->algorithm-identifier
+	      (asn1-collection-elements asn1-object))))
+
+(define *enc-oids*
+  `(
+    ("2.16.840.1.101.3.4.1.2" .  ,*scheme:aes-128*) ;; AES128-CBC-Pad
+    ("2.16.840.1.101.3.4.1.22" . ,*scheme:aes-192*) ;; AES192-CBC-Pad
+    ("2.16.840.1.101.3.4.1.42" . ,*scheme:aes-256*) ;; AES256-CBC-Pad
+    ))
+(define *reverse-enc-oids* (map (lambda (e) (cons (cdr e) (car e))) *enc-oids*))
+(define (make-pbes2-encryption-scheme scheme iv)
+  (make-algorithm-identifier
+   (make-der-object-identifier
+    (cond ((assq scheme *reverse-enc-oids*) => cdr)
+	  (else (springkussen-assertion-violation 'make-pbes2-encryption-scheme
+						  "Unknown scheme" scheme))))
+   (make-der-octet-string iv)))
+
+(define *prf-oids*
+  `(("1.2.840.113549.2.7"  . ,*digest:sha1*)
+    ("1.2.840.113549.2.8"  . ,*digest:sha224*)
+    ("1.2.840.113549.2.9"  . ,*digest:sha256*)
+    ("1.2.840.113549.2.10" . ,*digest:sha384*)
+    ("1.2.840.113549.2.11" . ,*digest:sha512*)
+    ("1.2.840.113549.2.12" . ,*digest:sha512/224*)
+    ("1.2.840.113549.2.13" . ,*digest:sha512/256*)))
+(define *reverse-prf-oids* (map (lambda (e) (cons (cdr e) (car e))) *prf-oids*))
+(define (make-pbes2-kdf-parameter salt iteration key-length md)
+  (make-algorithm-identifier
+   (make-der-object-identifier "1.2.840.113549.1.5.12")
+   (der-sequence
+    (make-der-octet-string salt)
+    (make-der-integer iteration)
+    (make-der-integer key-length)
+    (make-algorithm-identifier
+     (cond ((assq md *reverse-prf-oids*) => cdr)
+	   (else (springkussen-assertion-violation
+		  'make-pbes2-kdf-parameter "Unknown digest" md)))))))
+     
 
 )
 
