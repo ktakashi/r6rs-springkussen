@@ -35,6 +35,9 @@
 	    cms-content-info-content
 	    asn1-object->cms-content-info
 
+	    ;; 4 Data Content Type
+	    der-octet-string->content-info
+	    
 	    ;; 5 Signed-data Content Type
 	    cms-signed-data? make-cms-signed-data
 	    cms-signed-data-version
@@ -202,10 +205,16 @@
 	    cms-one-asymmetric-key-attributes
 	    cms-one-asymmetric-key-public-key
 	    asn1-object->cms-one-asymmetric-key
+	    bytevector->cms-one-asymmetric-key
+	    cms-one-asymmetric-key->private-key
+	    private-key->cms-one-asymmetric-key
 	    
 	    make-cms-private-key-info
 	    cms-private-key-info?
 	    asn1-object->cms-private-key-info
+	    bytevector->cms-private-key-info
+	    cms-private-key-info->private-key
+	    private-key->cms-private-key-info
 
 	    cms-encrypted-private-key-info? make-cms-encrypted-private-key-info
 	    cms-encrypted-private-key-info-encryption-algorithm

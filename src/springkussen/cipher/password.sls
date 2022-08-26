@@ -72,9 +72,11 @@
 	    make-pbe-cipher
 
 	    pbe-parameter? make-pbe-parameter asn1-object->pbe-parameter
+	    pbe-parameter:salt pbe-parameter:iteration
 	    pbes2-parameter? make-pbes2-parameter asn1-object->pbes2-parameter
 	    make-pbes2-encryption-scheme
 	    make-pbes2-kdf-parameter
+	    pbes2-parameter->pbe-cipher&parameter
 	    
 	    ;; re-export
 	    symmetric-cipher? 
@@ -124,6 +126,7 @@
 	    (springkussen cipher password scheme pbes1)
 	    (springkussen cipher password scheme pbes2)
 	    (springkussen digest)
+	    (springkussen mac)
 	    (springkussen x509 types) ;; getting silly...
 	    (springkussen misc lambda))
 
@@ -149,7 +152,10 @@
 		salt iteration)))))
 (define (asn1-object->pbe-parameter asn1-object)
   (der-sequence->simple-asn1-encodable asn1-object make-pbe-parameter))
-
+(define/typed (pbe-parameter:salt (pbe-parameter pbe-parameter?))
+  (der-octet-string-value (pbe-parameter-salt pbe-parameter)))
+(define/typed (pbe-parameter:iteration (pbe-parameter pbe-parameter?))
+  (der-integer-value (pbe-parameter-iteration pbe-parameter)))
 
 ;; PBES2-params ::= SEQUENCE {
 ;;     keyDerivationFunc AlgorithmIdentifier {{PBES2-KDFs}},
@@ -159,7 +165,17 @@
 ;; PBES2-KDFs ALGORITHM-IDENTIFIER ::=
 ;;     { {PBKDF2-params IDENTIFIED BY id-PBKDF2}, ... }
 ;;
-;;   PBES2-Encs ALGORITHM-IDENTIFIER ::= { ... }
+;; PBES2-Encs ALGORITHM-IDENTIFIER ::= { ... }
+;; 
+;; PBKDF2-params ::= SEQUENCE {
+;;     salt CHOICE {
+;;         specified OCTET STRING,
+;;         otherSource AlgorithmIdentifier {{PBKDF2-SaltSources}}
+;;     },
+;;     iterationCount INTEGER (1..MAX),
+;;     keyLength INTEGER (1..MAX) OPTIONAL,
+;;     prf AlgorithmIdentifier {{PBKDF2-PRFs}} DEFAULT
+;;     algid-hmacWithSHA1 }
 (define-record-type pbes2-parameter
   (parent <asn1-encodable-object>)
   (fields key-derivation encryption-scheme)
@@ -168,10 +184,98 @@
 			     (encryption-scheme algorithm-identifier?))
 	       ((n simple-asn1-encodable-object->der-sequence)
 		key-derivation encryption-scheme)))))
+
 (define/typed (asn1-object->pbes2-parameter (asn1-object der-sequence?))
-  (apply make-pbes2-parameter
-	 (map asn1-object->algorithm-identifier
-	      (asn1-collection-elements asn1-object))))
+  (let ((aids (map asn1-object->algorithm-identifier
+		(asn1-collection-elements asn1-object))))
+    (unless (= (length aids) 2)
+      (springkussen-assertion-violation 'asn1-object->pbes2-parameter
+					"Invalid format"))
+    (make-pbes2-parameter
+     (make-algorithm-identifier (algorithm-identifier-algorithm (car aids))
+				(asn1-object->pbkdf2-parameters
+				 (algorithm-identifier-parameters (car aids))))
+     (cadr aids))))
+;; prf != OPTIONAL for us
+(define-record-type pbkdf2-parameters
+  (parent <asn1-encodable-object>)
+  (fields salt iteration key-length prf)
+  (protocol (lambda (n)
+	      (case-lambda/typed
+	       (((salt der-octet-string?)
+		 (iteration der-integer?)
+		 (prf algorithm-identifier?))
+		((n simple-asn1-encodable-object->der-sequence)
+		 salt iteration #f prf))
+	       (((salt der-octet-string?)
+		 (iteration der-integer?)
+		 (key-length der-integer?)
+		 (prf algorithm-identifier?))
+		((n simple-asn1-encodable-object->der-sequence)
+		 salt iteration key-length prf))))))
+(define/typed (asn1-object->pbkdf2-parameters (asn1-object der-sequence?))
+  (let ((e (asn1-collection-elements asn1-object)))
+    (case (length e)
+      ((3)
+       (make-pbkdf2-parameters (car e) (cadr e)
+			       (asn1-object->algorithm-identifier (caddr e))))
+      ((4)
+       (make-pbkdf2-parameters (car e) (cadr e) (caddr e)
+			       (asn1-object->algorithm-identifier (cadddr e))))
+      (else
+       (springkussen-error 'asn1-object->pbkdf2-parameters
+			   "Unsported format" asn1-object)))))
+		  
+
+(define/typed (pbes2-parameter->pbe-cipher&parameter
+	       (parameter pbes2-parameter?))
+  (define key-derivation (pbes2-parameter-key-derivation parameter))
+  (define (scheme&iv parameter)
+    (define aid (pbes2-parameter-encryption-scheme parameter))
+    (let ((oid (der-object-identifier-value
+		(algorithm-identifier-algorithm aid)))
+	  (iv (der-octet-string-value (algorithm-identifier-parameters aid))))
+      (values (cond ((assoc oid *enc-oids*) => cdr)
+		    (else (springkussen-error
+			   'pbes2-parameter->pbe-cipher&parameter
+			   "Unsupported encryption" oid)))
+	      iv)))
+  (define (parse-key-derivation param)
+    (define (get-prf-digest aid)
+      (define oid (der-object-identifier-value
+		   (algorithm-identifier-algorithm aid)))
+      (cond ((assoc oid *prf-oids*) => cdr)
+	    (else (springkussen-error 'pbes2-parameter->pbe-cipher&parameter
+				      "Unsupported PRF" oid))))
+    (unless (pbkdf2-parameters? param)
+      (springkussen-error 'pbes2-parameter->pbe-cipher&parameter
+			  "Invalid parameter format"))
+    (values (der-octet-string-value (pbkdf2-parameters-salt param))
+	    (der-integer-value (pbkdf2-parameters-iteration param))
+	    (cond ((pbkdf2-parameters-key-length param) => der-integer-value)
+		  (else #f))
+	    (get-prf-digest (pbkdf2-parameters-prf param))))
+  (let ((kdf-oid (der-object-identifier-value
+		  (algorithm-identifier-algorithm key-derivation)))
+	(param (algorithm-identifier-parameters key-derivation)))
+    (unless (string=? "1.2.840.113549.1.5.12" kdf-oid)
+      (springkussen-assertion-violation 'pbes2-parameter->pbe-cipher
+					"Only PBKDF2 is supported" kdf-oid))
+    (let-values (((scheme iv) (scheme&iv parameter))
+		 ((salt iteration key-length md) (parse-key-derivation param)))
+      (values (make-pbe-cipher pbes2-scheme-descriptor
+	       (make-pbe-cipher-encryption-scheme-parameter scheme))
+	      (make-cipher-parameter
+	       (make-iv-paramater iv)
+	       (make-pbes2-cipher-encryption-mode-parameter *mode:cbc*)
+	       (make-pbe-cipher-salt-parameter salt)
+	       (make-pbe-cipher-iteration-parameter iteration)
+	       (make-pbe-cipher-key-size-parameter key-length)
+	       (make-pbe-cipher-kdf-parameter
+		(make-pbkdf-2
+		 (make-pbe-kdf-prf-parameter
+		  (mac->pbkdf2-prf *mac:hmac*
+				   (make-partial-hmac-parameter md))))))))))
 
 (define *enc-oids*
   `(
@@ -200,14 +304,15 @@
 (define (make-pbes2-kdf-parameter salt iteration key-length md)
   (make-algorithm-identifier
    (make-der-object-identifier "1.2.840.113549.1.5.12")
-   (der-sequence
+   (make-pbkdf2-parameters
     (make-der-octet-string salt)
     (make-der-integer iteration)
     (make-der-integer key-length)
     (make-algorithm-identifier
-     (cond ((assq md *reverse-prf-oids*) => cdr)
-	   (else (springkussen-assertion-violation
-		  'make-pbes2-kdf-parameter "Unknown digest" md)))))))
+     (make-der-object-identifier
+      (cond ((assq md *reverse-prf-oids*) => cdr)
+	    (else (springkussen-assertion-violation
+		   'make-pbes2-kdf-parameter "Unknown digest" md))))))))
      
 
 )

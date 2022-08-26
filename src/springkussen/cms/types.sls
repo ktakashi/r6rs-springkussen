@@ -36,6 +36,8 @@
 	    cms-content-info-content
 	    asn1-object->cms-content-info
 
+	    der-octet-string->content-info
+	    
 	    ;; 5 Signed-data Content Type
 	    cms-signed-data? make-cms-signed-data
 	    cms-signed-data-version
@@ -236,6 +238,10 @@
   (and (string=? "1.2.840.113549.1.7.1" (der-object-identifier-value ct))
        (and (der-octet-string? content))
        content))
+
+(define/typed (der-octet-string->content-info (string der-octet-string?))
+  (make-cms-content-info
+   (make-der-object-identifier "1.2.840.113549.1.7.1") string))
 
 ;;;; 5 Signed-data Content Type
 ;;; 5.1 SignedData Type
