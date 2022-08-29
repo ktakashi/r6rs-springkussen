@@ -37,6 +37,7 @@
     (import (rnrs)
 	    (springkussen conditions)
 	    (springkussen cipher symmetric)
+	    (springkussen cipher symmetric scheme descriptor)
 	    (springkussen cipher password kdf)
 	    (springkussen cipher password scheme descriptor)
 	    (springkussen misc bytevectors))
@@ -49,7 +50,9 @@
 (define (pbes1-init scheme op password param)
   (define salt (pbe-cipher-parameter-salt param))
   (define block-size (symmetric-scheme-descriptor-block-size scheme))
-  (define dk-len (pbe-cipher-parameter-key-size param block-size))
+  (define dk-len
+    (or (pbe-cipher-parameter-key-size param #f)
+	(select-key-length (symmetric-scheme-descriptor-key-length* scheme))))
   (define kdf (or (pbe-cipher-parameter-kdf param #f) (make-pbkdf-1 #f)))
   (define iteration (pbe-cipher-parameter-iteration param *default-iteration*))
 
@@ -66,6 +69,21 @@
 				(make-iv-paramater iv))
 	(make-pbes1-state cipher)))))
 
+;; TODO copy&paste
+(define (select-key-length key-length*)
+  (cond ((number? key-length*) key-length*)
+	((pair? key-length*)
+	 (if (pair? (cdr key-length*))
+	     ;; take the last one (the biggest)
+	     (let loop ((k key-length*))
+	       (if (null? (cdr k))
+		   (car k)
+		   (loop (cdr k))))
+	     ;; range, so take the upper bound
+	     (cdr key-length*)))
+	(else (springkussen-assertion-violation 'select-key-length
+		"Invalid encryption scheme descriptor"))))
+  
 (define (pbes1-encrypt state pt ps ct cs)
   (let ((cipher (pbes1-state-cipher state)))
     (symmetric-cipher:encrypt! cipher pt ps ct cs)))
