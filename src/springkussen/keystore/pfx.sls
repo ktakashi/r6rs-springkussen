@@ -140,7 +140,9 @@
 	  key))
     (let ((private-keys (pkcs12-keystore-private-keys keystore)))
       (cond ((hashtable-ref private-keys alias #f) =>
-	     (lambda (key) (cms-one-asymmetric-key->private-key (decrypt key))))
+	     (lambda (key)
+	       (cms-one-asymmetric-key->private-key
+		(decrypt (safe-bag-bag-value key)))))
 	    (else #f))))))
 
 (define pkcs12-keystore-private-key-set!
@@ -163,13 +165,21 @@
 	  (make-cms-encrypted-private-key-info
 	   aid
 	   (make-der-octet-string data)))))
+    (define (->entry pki password alias local-id)
+      (define attrs
+	(der-set
+	 (make-pkcs12-friendly-name-attribute (make-der-bmp-string alias))
+	 (make-pkcs12-local-key-id-attribute (make-der-octet-string local-id))))
+      (if password
+	  (make-pkcs8-shrouded-key-safe-bag
+	   (encrypt keystore encryption-algorithm pki password) attrs)
+	  (make-key-safe-bag pki attrs)))
     (let ((pki (private-key->cms-private-key-info key))
+	  (local-id (pkcs12-keystore-add-local-id! keystore alias 'private-key))
 	  (private-keys (pkcs12-keystore-private-keys keystore)))
-      (pkcs12-keystore-add-local-id! keystore alias 'private-key)
+      
       (hashtable-set! private-keys alias
-		      (if password
-			  (encrypt keystore encryption-algorithm pki password)
-			  pki))))))
+		      (->entry pki password alias local-id))))))
 
 (define *pbes2-oid* (make-der-object-identifier "1.2.840.113549.1.5.13"))
 (define (make-pbes2-algorithm-identifier-provider md salt-size iter dk-len enc)
@@ -195,7 +205,9 @@
 			   (cons (car v) (cons type (cdr v)))
 			   (list (random-generator:read-random-bytes prng 16)
 				 type)))
-		     #f))
+		     #f)
+  ;; A bit wasteful, but R6RS hashtable-update! returns unspecified values...
+  (car (hashtable-ref aliases alias #f)))
 
 (define (pfx->pkcs12-keystore pfx password)
   (let* ((mac-descriptor (pfx:verify-mac pfx password))
@@ -210,28 +222,23 @@
     keystore))
 
 (define (process-bag! keystore bag)
-  (define (unwrap-bag-value keystore value)
-    (cond ((cms-private-key-info? value)
-	   (values value 'private-key (pkcs12-keystore-private-keys keystore)))
-	  ((cms-encrypted-private-key-info? value)
-	   (values value 'private-key (pkcs12-keystore-private-keys keystore)))
-	  ((cert-bag? value)
-	   (let ((cert (cert-bag-cert-value value)))
-	     (values cert 'certificate
-		     (pkcs12-keystore-certificates keystore))))
-	  ((crl-bag? value)
-	   (let ((crl (crl-bag-crl-value value)))
-	     (values crl 'crl (pkcs12-keystore-crls keystore))))
-	  ((secret-bag? value)
-	   (let ((secret (secret-bag-secret-value value)))
-	     (values secret 'secret-key
-		     (pkcs12-keystore-secret-keys keystore))))
+  (define (entry-type&storage keystore bag)
+    (cond ((key-safe-bag? bag)
+	   (values 'private-key (pkcs12-keystore-private-keys keystore)))
+	  ((pkcs8-shrouded-key-safe-bag? bag)
+	   (values 'private-key (pkcs12-keystore-private-keys keystore)))
+	  ((cert-safe-bag? bag)
+	   (values  'certificate (pkcs12-keystore-certificates keystore)))
+	  ((crl-safe-bag? bag)
+	   (values 'crl (pkcs12-keystore-crls keystore)))
+	  ((secret-safe-bag? bag)
+	   (values 'secret-key (pkcs12-keystore-secret-keys keystore)))
 	  ;; nested bag, let the user handle it
-	  ((der-sequence? value)
-	   (values bag 'safe-contents (pkcs12-keystore-safe-contents keystore)))
+	  ((safe-contents-safe-bag? bag)
+	   (values 'safe-contents (pkcs12-keystore-safe-contents keystore)))
 	  (else
-	   (springkussen-error 'process-bag! "Unknown bag type" value))))
-  (define (store-value keystore attribute value entry-type storage)
+	   (springkussen-error 'process-bag! "Unknown bag type" bag))))
+  (define (store-bag keystore attribute value entry-type storage)
     (define (finish keystore storage value local-id alias)
       (define prng (pkcs12-keystore-prng keystore))
       (define (ensure-alias alias)
@@ -263,66 +270,14 @@
 					 (car (asn1-collection-elements v)))))
 		  ;; ignore
 		  (else (loop (cdr a*) alias local-id)))))))
-  (let ((value (safe-bag-bag-value bag))
-	(attributes (safe-bag-bag-attributes bag)))
-    (let-values (((unwrapped-value entry-type storage)
-		  (unwrap-bag-value keystore value)))
-      (store-value keystore attributes unwrapped-value entry-type storage))))
+  (let ((attributes (safe-bag-bag-attributes bag)))
+    (let-values (((entry-type storage) (entry-type&storage keystore bag)))
+      (store-bag keystore attributes bag entry-type storage))))
 
 (define (pkcs12-keystore->pfx ks password alg)
   (define (hashtable->bags ht aliases)
-    (define (handle-bag-value v e attr)
-      (cond ((cms-private-key-info? v)
-	     (make-safe-bag
-	      (make-der-object-identifier "1.2.840.113549.1.12.10.1.1")
-	      v attr))
-	    ((cms-encrypted-private-key-info? v)
-	     (make-safe-bag
-	      (make-der-object-identifier "1.2.840.113549.1.12.10.1.2")
-	      v attr))
-	    ((x509-certificate? v)
-	     (let* ((key-pair? (memq 'private-key e))
-		    (attr (if key-pair?
-			      attr
-			      (make-der-set
-			       (cons
-				(make-java-trusted-certificate-id-attribute)
-				(asn1-collection-elements attr))))))
-	       (make-safe-bag
-		(make-der-object-identifier "1.2.840.113549.1.12.10.1.3")
-		(make-x509-cert-bag v) attr)))
-	    ((x509-certificate-revocation-list? v)
-	     (make-safe-bag
-	      (make-der-object-identifier "1.2.840.113549.1.12.10.1.4")
-	      (make-crl-bag
-	       (make-der-object-identifier "1.2.840.113549.1.9.23.1") v)
-	      attr))
-	    ((secret-bag-value? v)
-	     (let ((v2 (handle-bag-value (secret-bag-value-value v) e attr)))
-	       (make-safe-bag
-		(make-der-object-identifier "1.2.840.113549.1.12.10.1.5")
-		(make-secret-bag (safe-bag-bag-id v2) (safe-bag-bag-value v2))
-		attr)))
-	    ((der-sequence? v)
-	     (make-safe-bag
-	      (make-der-object-identifier "1.2.840.113549.1.12.10.1.6")
-	      v attr))
-	    (else (springkussen-error 'pkcs12-keystore->pfx
-				      "Unknown value" v))))
-    (define (->bag k v)
-      (let ((e (hashtable-ref aliases k #f)))
-	(unless e
-	  (springkussen-error 'pkcs12-keystore->pfx "[BUG] no local id" k))
-	(let ((attr (der-set
-		     (make-pkcs12-friendly-name-attribute
-		      (make-der-bmp-string k))
-		     (make-pkcs12-local-key-id-attribute
-		      (make-der-octet-string (car e))))))
-	  (handle-bag-value v e attr))))
-		   
     (let-values (((keys values) (hashtable-entries ht)))
-      (vector->list (vector-map ->bag keys values))))
-
+      (vector->list values)))
   (define (encrypt-content ks content)
     (define prng (pkcs12-keystore-prng ks))
     (define bv (asn1-object->bytevector content))
@@ -341,22 +296,19 @@
   (define mac-descriptor (pkcs12-keystore-mac-descriptor ks))
   (define prng (pkcs12-keystore-prng ks))
   
-  (let* ((bags (der-octet-string->content-info
-		(make-der-octet-string
-		 (asn1-object->bytevector
-		  (make-der-sequence
-		   (append (hashtable->bags private-keys aliases)
-			   (hashtable->bags secret-keys aliases)
-			   (hashtable->bags safe-contents aliases)))))))
-	 (encrypted-bags (cms-encrypted-data->content-info
+  (let* ((encrypted-bags (cms-encrypted-data->content-info
 			  (make-cms-encrypted-data
 			   (make-der-integer 0)
 			   (encrypt-content ks
 			    (make-der-sequence
-			     (append (hashtable->bags certificates aliases)
-				     (hashtable->bags crls aliases))))
+			     (append
+			      (hashtable->bags private-keys aliases)
+			      (hashtable->bags secret-keys aliases)
+			      (hashtable->bags certificates aliases)
+			      (hashtable->bags crls aliases)
+			      (hashtable->bags safe-contents aliases))))
 			   #f)))
-	 (mac-data (asn1-object->bytevector (der-sequence bags encrypted-bags)))
+	 (mac-data (asn1-object->bytevector (der-sequence encrypted-bags)))
 	 (auth-safe (der-octet-string->content-info
 		     (make-der-octet-string mac-data)))
 	 (md (pkcs12-mac-descriptor-md mac-descriptor))
@@ -598,6 +550,35 @@
 			     (bag-attribute
 			      (or #f (der-set-of? pkcs12-attribute?))))
 	        ((n safe-bag->asn1-object) bag-id bag-value bag-attribute)))))
+
+(define *key-bag-id* (make-der-object-identifier "1.2.840.113549.1.12.10.1.1"))
+(define *pkcs8-shrouded-key-bag-id*
+  (make-der-object-identifier "1.2.840.113549.1.12.10.1.2"))
+(define *cert-bag-id* (make-der-object-identifier "1.2.840.113549.1.12.10.1.3"))
+(define *crl-bag-id* (make-der-object-identifier "1.2.840.113549.1.12.10.1.4"))
+(define *secret-bag-id*
+  (make-der-object-identifier "1.2.840.113549.1.12.10.1.5"))
+(define *safe-contents-bag-id*
+  (make-der-object-identifier "1.2.840.113549.1.12.10.1.5"))
+(define-syntax define-concrete-safe-bag
+  (syntax-rules ()
+    ((_ name oid value-type?)
+     (define-record-type name
+       (parent safe-bag)
+       (protocol (lambda (n)
+		   (lambda/typed ((bag-value value-type?)
+				  (bag-attribute
+				   (or #f (der-set-of? pkcs12-attribute?))))
+		    ((n oid bag-value bag-attribute)))))))))
+(define-concrete-safe-bag key-safe-bag *key-bag-id* cms-private-key-info?)
+(define-concrete-safe-bag pkcs8-shrouded-key-safe-bag
+  *pkcs8-shrouded-key-bag-id* cms-encrypted-private-key-info?)
+(define-concrete-safe-bag cert-safe-bag *cert-bag-id* cert-bag?)
+(define-concrete-safe-bag crl-safe-bag *crl-bag-id* crl-bag?)
+(define-concrete-safe-bag secret-safe-bag *secret-bag-id* secret-bag?)
+(define-concrete-safe-bag safe-contents-safe-bag *safe-contents-bag-id*
+  der-sequence?)
+
 (define (safe-bag->asn1-object self)
   (make-der-sequence
    (filter values (list (safe-bag-bag-id self)
@@ -610,13 +591,13 @@
       (springkussen-assertion-violation 'asn1-object->safe-bag
 					"Invalid format"))
     (let* ((id (car e))
-	   ;; TODO convert bag-value to appropriate types
-	   (value (handle-bag-value id (der-tagged-object-obj (cadr e))))
 	   (attrs (and (not (null? (cddr e))) (caddr e))))
-      (make-safe-bag id value
-	(and attrs 
-	     (make-der-set (map asn1-object->pkcs12-attribute
-				(asn1-collection-elements attrs))))))))
+      (handle-safe-bag id
+       (and attrs 
+	    (make-der-set
+	     (map asn1-object->pkcs12-attribute
+		  (asn1-collection-elements attrs))))
+       (der-tagged-object-obj (cadr e))))))
 
 ;; PKCS12Attribute ::= SEQUENCE {
 ;;     attrId      ATTRIBUTE.&id ({PKCS12AttrSet}),
@@ -630,7 +611,7 @@
 ;; }
 (define-record-type pkcs12-attribute
   (parent <asn1-encodable-object>)
-  (fields attr-id attr-values)
+  (fields attr-id (mutable attr-values))
   (protocol (lambda (n)
 	      (lambda/typed ((attr-id der-object-identifier?)
 			     (attr-values (der-set-of? asn1-object?)))
@@ -682,25 +663,30 @@
 	     (make-java-trusted-certificate-id-attribute))
 	    (else (make-pkcs12-attribute oid set))))))
 
-(define (handle-bag-value id asn1-object)
+(define (handle-safe-bag id attrs asn1-object)
   (define oid (der-object-identifier-value id))
 
   (cond ((string=? oid "1.2.840.113549.1.12.10.1.1")
-	 (asn1-object->key-bag asn1-object))
+	 (make-key-safe-bag (asn1-object->key-bag asn1-object) attrs))
 	((string=? oid "1.2.840.113549.1.12.10.1.2")
-	 (asn1-object->pkcs8-shrouded-bag asn1-object))
+	 (make-pkcs8-shrouded-key-safe-bag
+	  (asn1-object->pkcs8-shrouded-bag asn1-object) attrs))
 	((string=? oid "1.2.840.113549.1.12.10.1.3")
-	 (asn1-object->cert-bag asn1-object))
+	 (make-cert-safe-bag (asn1-object->cert-bag asn1-object) attrs))
 	((string=? oid "1.2.840.113549.1.12.10.1.4")
-	 (asn1-object->crl-bag asn1-object))
+	 (make-crl-safe-bag (asn1-object->crl-bag asn1-object) attrs))
 	((string=? oid "1.2.840.113549.1.12.10.1.5")
-	 (asn1-object->secret-bag asn1-object))
+	 (make-secret-safe-bag (asn1-object->secret-bag asn1-object) attrs))
 	((string=? oid "1.2.840.113549.1.12.10.1.6")
 	 ;; sort of type conversion?
-	 (make-der-sequence
-	  (map asn1-object->safe-bag (asn1-collection-elements asn1-object))))
+	 (make-safe-contents-safe-bag
+	  (make-der-sequence
+	   (map asn1-object->safe-bag (asn1-collection-elements asn1-object)))
+	  attrs))
 	;; unknown, let it be
-	(else asn1-object)))
+	;; TODO should we raise an error? but it can be future extensions...
+	(else (make-safe-bag id asn1-object attrs))))
+
 ;; KeyBag ::= PrivateKeyInfo
 (define (asn1-object->key-bag asn1-object)
   (asn1-object->cms-private-key-info asn1-object))
@@ -831,12 +817,7 @@
 	      (lambda/typed ((secret-type-id der-object-identifier?)
 			     (secret-value asn1-object?))
 	       ((n secret-bag->asn1-object) secret-type-id secret-value)))))
-(define-record-type secret-bag-value
-  (parent <asn1-encodable-object>)
-  (fields value)
-  (protocol (lambda (n)
-	      (lambda/typed ((v asn1-object?))
-		((n secret-bag-value-value) v)))))
+
 (define (secret-bag->asn1-object self)
   (der-sequence
    (secret-bag-secret-type-id self)
@@ -849,7 +830,7 @@
 	 (obj (bytevector->asn1-object
 	       (der-octet-string-value (der-tagged-object-obj v))))
 	 (oid (car (asn1-collection-elements asn1-object))))
-    (make-secret-bag oid (make-secret-bag-value (handle-bag-value oid obj)))))
+    (make-secret-bag oid (handle-safe-bag oid #f obj))))
 
 
 (define (aid->cipher&key-parameter aid)
