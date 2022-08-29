@@ -81,6 +81,7 @@
 	    der-set? make-der-set <der-set>
 	    der-set der-set-elements
 	    der-set-of?
+	    der-set:add!
 	    der-set->simple-asn1-encodable
 	    
 	    der-numeric-string? make-der-numeric-string

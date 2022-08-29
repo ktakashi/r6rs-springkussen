@@ -31,14 +31,32 @@
 ;; ref: https://datatracker.ietf.org/doc/html/rfc7292
 #!r6rs
 (library (springkussen keystore pfx)
-    (export pkcs12-keystore?
+    (export pkcs12-keystore? pkcs12-keystore-builder
 	    read-pkcs12-keystore
 	    bytevector->pkcs12-keystore
 	    write-pkcs12-keystore
 	    pkcs12-keystore->bytevector
 
+	    pkcs12-entry-type pkcs12-entry-types
+	    
 	    pkcs12-keystore-private-key-ref
 	    pkcs12-keystore-private-key-set!
+	    pkcs12-keystore-certificate-ref
+	    pkcs12-keystore-certificate-set!
+
+	    pkcs12-keystore-add-attribute!
+	    
+	    pkcs12-mac-descriptor? make-pkcs12-mac-descriptor
+
+	    ;; For Java trusted cert...
+	    make-java-trusted-certificate-id-attribute
+
+	    ;; For whatever the reason...
+	    *pkcs12-pbe/sha1-and-des3-cbc*
+	    *pkcs12-pbe/sha1-and-des2-cbc*
+	    *pkcs12-pbe/sha1-and-rc2-128-cbc*
+	    *pkcs12-pbe/sha1-and-rc2-40-cbc*
+	    *pbes2-aes256-cbc-pad/hmac-sha256*
 	    )
     (import (rnrs)
 	    (springkussen asn1)
@@ -66,8 +84,10 @@
   (make-pkcs12-mac-descriptor *digest:sha256* 1024))
 
 (define-enumeration pkcs12-entry-type
-  (private-key certificate crl secret-key safe-contents)
+  (private-key certificate crl secret-key safe-contents unknown)
   pkcs12-entry-types)
+(define *entry-types* (enum-set-universe (pkcs12-entry-types)))
+(define make-entry-types (enum-set-constructor *entry-types*))
 
 ;; Should we make different record for password based and public key based
 ;; identify mode?
@@ -77,6 +97,7 @@
 	  crls	       ;; crlBag
 	  secret-keys  ;; secretBag
 	  safe-contents ;; safeContentBag
+	  unknowns	;; unknown entry (maybe extension?)
 	  aliases	;; key = alias, value = (local-id entry-types ...)
 	  mac-descriptor
 	  prng))
@@ -88,6 +109,7 @@
     (crls (make-hashtable string-ci-hash string-ci=?))
     (secret-keys (make-hashtable string-ci-hash string-ci=?))
     (safe-contents (make-hashtable string-ci-hash string-ci=?))
+    (unknowns (make-hashtable string-ci-hash string-ci=?))
     (aliases (make-hashtable string-ci-hash string-ci=?))
     (mac-descriptor default-mac-descriptor)
     (prng default-random-generator))))
@@ -105,13 +127,15 @@
   (case-lambda/typed
    ((keystore password)
     (write-pkcs12-keystore keystore (current-output-port) password))
+   ((keystore out password)
+    (write-pkcs12-keystore keystore out password
+			   *pbes2-aes256-cbc-pad/hmac-sha256*))
    (((keystore pkcs12-keystore?)
      (out (and output-port? binary-port?))
-     (password string?))
-    (write-asn1-object
-     ;; For now...
-     (pkcs12-keystore->pfx keystore password *pbes2-aes256-cbc-pad/hmac-sha256*)
-     out))))
+     (password string?)
+     algorithm)
+    (write-asn1-object (pkcs12-keystore->pfx keystore password algorithm)
+		       out))))
 (define (pkcs12-keystore->bytevector keystore password)
   (let-values (((out e) (open-bytevector-output-port)))
     (write-pkcs12-keystore keystore out password)
@@ -166,10 +190,7 @@
 	   aid
 	   (make-der-octet-string data)))))
     (define (->entry pki password alias local-id)
-      (define attrs
-	(der-set
-	 (make-pkcs12-friendly-name-attribute (make-der-bmp-string alias))
-	 (make-pkcs12-local-key-id-attribute (make-der-octet-string local-id))))
+      (define attrs (make-pkcs12-attributes alias local-id))
       (if password
 	  (make-pkcs8-shrouded-key-safe-bag
 	   (encrypt keystore encryption-algorithm pki password) attrs)
@@ -181,19 +202,91 @@
       (hashtable-set! private-keys alias
 		      (->entry pki password alias local-id))))))
 
+(define/typed (pkcs12-keystore-certificate-ref (keystore pkcs12-keystore?)
+					      (alias string?))
+  (cond ((hashtable-ref (pkcs12-keystore-certificates keystore) alias #f) =>
+	 (lambda (bag) (cert-bag-cert-value (safe-bag-bag-value bag))))
+	(else #f)))
+(define/typed (pkcs12-keystore-certificate-set! (keystore pkcs12-keystore?)
+						(alias string?)
+						(cert x509-certificate?))
+  (define (->entry ks cert alias)
+    (let* ((local-id (pkcs12-keystore-add-local-id! ks alias 'certificate))
+	   (attrs (make-pkcs12-attributes alias local-id)))
+      (make-cert-safe-bag (make-x509-cert-bag cert) attrs)))
+
+  (hashtable-set! (pkcs12-keystore-certificates keystore) alias
+		  (->entry keystore cert alias)))
+
+(define (entry-types? v)
+  (if (list? v)
+      (entry-types? (make-entry-types v))
+      (enum-set-subset? v *entry-types*)))
+(define (entry-types->storages ks entry-types)
+  (define (entry-type->storage ks entry-type)
+    ((case entry-type
+       ((private-key)   pkcs12-keystore-private-keys)
+       ((certificate)   pkcs12-keystore-certificates)
+       ((crl)           pkcs12-keystore-crls)
+       ((secret-key)    pkcs12-keystore-secret-keys)
+       ((safe-contents) pkcs12-keystore-safe-contents)
+       ((unknown)       pkcs12-keystore-unknowns)
+       (else (springkussen-assertion-violation 'entry-type->storage
+	       "Unknown entry type" entry-type))) ks))
+  (if (pair? entry-types)
+      (map (lambda (et) (entry-type->storage ks et)) entry-types)
+      (entry-types->storages ks (enum-set->list entry-types))))
+
+(define pkcs12-keystore-add-attribute!
+  (case-lambda/typed
+   (((keystore pkcs12-keystore?) (alias string?) attribute)
+    (cond ((hashtable-ref (pkcs12-keystore-aliases keystore) alias #f) =>
+	   (lambda (slot)
+	     (pkcs12-keystore-add-attribute! keystore alias
+					     (make-entry-types (cdr slot))
+					     attribute)))))
+   (((keystore pkcs12-keystore?)
+     (alias string?)
+     (entry-types entry-types?)
+     (attribute pkcs12-attribute?))
+    (for-each (lambda (storage)
+		(cond ((hashtable-ref storage alias #f) =>
+		       (lambda (bag) (safe-bag-add-attribute! bag attribute)))))
+	      (entry-types->storages keystore entry-types)))))
+
 (define *pbes2-oid* (make-der-object-identifier "1.2.840.113549.1.5.13"))
+(define (ensure-asn1-object o)
+  (bytevector->asn1-object (asn1-object->bytevector o)))
 (define (make-pbes2-algorithm-identifier-provider md salt-size iter dk-len enc)
   (lambda (prng)
     (let* ((salt (random-generator:read-random-bytes prng salt-size))
 	   (iv-size (symmetric-scheme-descriptor-block-size enc))
 	   (iv (random-generator:read-random-bytes prng iv-size)))
-      (values *pbes2-oid*
-	      (make-pbes2-parameter
-	       (make-pbes2-kdf-parameter salt iter dk-len md)
-	       (make-pbes2-encryption-scheme enc iv))))))
+      (make-algorithm-identifier *pbes2-oid*
+       (ensure-asn1-object
+	(make-pbes2-parameter
+	 (make-pbes2-kdf-parameter salt iter dk-len md)
+	 (make-pbes2-encryption-scheme enc iv)))))))
 (define *pbes2-aes256-cbc-pad/hmac-sha256*
   (make-pbes2-algorithm-identifier-provider *digest:sha256* 16 1000 32
 					    *scheme:aes-256*))
+
+(define (make-pbe-algorithm-identifier-provider oid salt-size iter)
+  (define der-oid (make-der-object-identifier oid))
+  (lambda (prng)
+    (let ((salt (random-generator:read-random-bytes prng salt-size)))
+      (make-algorithm-identifier der-oid
+       (ensure-asn1-object
+	(make-pbe-parameter (make-der-octet-string salt)
+			    (make-der-integer iter)))))))
+(define *pkcs12-pbe/sha1-and-des3-cbc*
+  (make-pbe-algorithm-identifier-provider "1.2.840.113549.1.12.1.3" 20 1000))
+(define *pkcs12-pbe/sha1-and-des2-cbc*
+  (make-pbe-algorithm-identifier-provider "1.2.840.113549.1.12.1.4" 20 1000))
+(define *pkcs12-pbe/sha1-and-rc2-128-cbc*
+  (make-pbe-algorithm-identifier-provider "1.2.840.113549.1.12.1.5" 20 1000))
+(define *pkcs12-pbe/sha1-and-rc2-40-cbc*
+  (make-pbe-algorithm-identifier-provider "1.2.840.113549.1.12.1.6" 20 1000))
 
 ;;;; Internal APIs
 (define (pkcs12-keystore-add-local-id! keystore alias type)
@@ -236,6 +329,8 @@
 	  ;; nested bag, let the user handle it
 	  ((safe-contents-safe-bag? bag)
 	   (values 'safe-contents (pkcs12-keystore-safe-contents keystore)))
+	  ((safe-bag? bag)
+	   (values 'unknown (pkcs12-keystore-unknowns keystore)))
 	  (else
 	   (springkussen-error 'process-bag! "Unknown bag type" bag))))
   (define (store-bag keystore attribute value entry-type storage)
@@ -293,6 +388,7 @@
   (define safe-contents (pkcs12-keystore-safe-contents ks))
   (define certificates (pkcs12-keystore-certificates ks))
   (define crls (pkcs12-keystore-crls ks))
+  (define unknowns (pkcs12-keystore-unknowns ks))
   (define mac-descriptor (pkcs12-keystore-mac-descriptor ks))
   (define prng (pkcs12-keystore-prng ks))
   
@@ -306,7 +402,8 @@
 			      (hashtable->bags secret-keys aliases)
 			      (hashtable->bags certificates aliases)
 			      (hashtable->bags crls aliases)
-			      (hashtable->bags safe-contents aliases))))
+			      (hashtable->bags safe-contents aliases)
+			      (hashtable->bags unknowns aliases))))
 			   #f)))
 	 (mac-data (asn1-object->bytevector (der-sequence encrypted-bags)))
 	 (auth-safe (der-octet-string->content-info
@@ -327,42 +424,21 @@
 	       (make-der-integer c)))))
 
 (define (encrypt-bytevector alg prng bv password)
-  (let ((key (make-pbe-key password)))
-    (let-values (((oid p*) (alg prng)))
-      (if (pbes2-parameter? p*)
-	  (let-values (((c p) (pbes2-parameter->pbe-cipher&parameter p*)))
-	    (let ((o (bytevector->asn1-object (asn1-object->bytevector p*))))
-	      (values (symmetric-cipher:encrypt-bytevector c key p bv)
-		      (make-algorithm-identifier oid o))))
-	  (springkussen-error 'pkcs12-keystore-private-key-set!
-			      "not yet")))))
+  (let ((key (make-pbe-key password))
+	(aid (alg prng)))
+    (let-values (((c p) (algorithm-identifier->pbe-cipher&parameter aid)))
+      (values (symmetric-cipher:encrypt-bytevector c key p bv)
+	      aid))))
 
 (define (algorithm-identifier->pbe-cipher&parameter aid)
-  (define oid
-    (der-object-identifier-value (algorithm-identifier-algorithm aid)))
+  (define oid (algorithm-identifier-algorithm aid))
   (define param (algorithm-identifier-parameters aid))
-  (define (oid->pbe1-scheme oid)
-    (cond ((string=? oid "1.2.840.113549.1.12.1.3") *scheme:desede*)
-	  #;((string=? oid "1.2.840.113549.1.12.1.4") *scheme:des2*)
-	  ((string=? oid "1.2.840.113549.1.12.1.6") *scheme:rc2*)
-	  (else
-	   (springkussen-error 'algorithm-identifier->pbe-cipher
-			       "Unsupported encryption scheme" oid))))
-  
-  (if (string=? oid "1.2.840.113549.1.5.13")	 ;; PBES2
+  ;; PBES2
+  (if (string=? (der-object-identifier-value oid) "1.2.840.113549.1.5.13")
       (let ((pbes2-parameter (asn1-object->pbes2-parameter param)))
 	(pbes2-parameter->pbe-cipher&parameter pbes2-parameter))
-      ;; PBES1
-      (let ((pbe-parameter (asn1-object->pbe-parameter param))
-	    (scheme (oid->pbe1-scheme oid)))
-	(values (make-pbe-cipher *pbe:pbes1*
-		 (make-cipher-parameter
-		  (make-pbe-cipher-encryption-scheme-parameter scheme)
-		  (make-pbe-cipher-salt-parameter
-		   (pbe-parameter:salt pbe-parameter))
-		  (make-pbe-cipher-iteration-parameter
-		   (pbe-parameter:iteration pbe-parameter))))
-		#f))))
+      ;; Assuem PBES1
+      (aid->cipher&key-parameter aid)))
 	
 
 ;;;; Internal implementation
@@ -543,13 +619,24 @@
 ;; }
 (define-record-type safe-bag
   (parent <asn1-encodable-object>)
-  (fields bag-id bag-value bag-attributes)
+  (fields bag-id bag-value (mutable bag-attributes))
   (protocol (lambda (n)
 	      (lambda/typed ((bag-id der-object-identifier?)
 			     (bag-value asn1-object?)
 			     (bag-attribute
 			      (or #f (der-set-of? pkcs12-attribute?))))
 	        ((n safe-bag->asn1-object) bag-id bag-value bag-attribute)))))
+
+(define/typed (safe-bag-add-attribute! (safe-bag safe-bag?)
+				       (attribute pkcs12-attribute?))
+  (define (ensure-attrs safe-bag)
+    (let ((attrs (safe-bag-bag-attributes safe-bag)))
+      (or attrs
+	  (let ((set (der-set)))
+	    (safe-bag-bag-attributes-set! safe-bag set)
+	    set))))
+  (let ((attrs (ensure-attrs safe-bag)))
+    (der-set:add! attrs attribute)))
 
 (define *key-bag-id* (make-der-object-identifier "1.2.840.113549.1.12.10.1.1"))
 (define *pkcs8-shrouded-key-bag-id*
@@ -644,6 +731,11 @@
 	        ((n *java-trusted-certificate-id*
 		    (der-set *any-extended-key-usage*)))))))
 
+(define (make-pkcs12-attributes alias local-id)
+  (der-set
+   (make-pkcs12-friendly-name-attribute (make-der-bmp-string alias))
+   (make-pkcs12-local-key-id-attribute (make-der-octet-string local-id))))
+
 (define/typed (asn1-object->pkcs12-attribute (asn1-object der-sequence?))
   (let ((e (asn1-collection-elements asn1-object)))
     (unless (= (length e) 2)
@@ -684,7 +776,6 @@
 	   (map asn1-object->safe-bag (asn1-collection-elements asn1-object)))
 	  attrs))
 	;; unknown, let it be
-	;; TODO should we raise an error? but it can be future extensions...
 	(else (make-safe-bag id asn1-object attrs))))
 
 ;; KeyBag ::= PrivateKeyInfo
@@ -868,7 +959,10 @@
       (bytevector-append dk iv))))
 
 (define *oid-cipher-creator*
-  `(("1.2.840.113549.1.12.1.6" . ,(make-pbes1-cipher-creator *scheme:rc2* 5))))
+  `(("1.2.840.113549.1.12.1.3" . ,(make-pbes1-cipher-creator *scheme:desede* 24))
+    ("1.2.840.113549.1.12.1.4" . ,(make-pbes1-cipher-creator *scheme:desede* 16))
+    ("1.2.840.113549.1.12.1.5" . ,(make-pbes1-cipher-creator *scheme:rc2* 16))
+    ("1.2.840.113549.1.12.1.6" . ,(make-pbes1-cipher-creator *scheme:rc2* 5))))
 
 
 ;;;; Appendix B. Deriving Keys and IVs from Passwords and Salt

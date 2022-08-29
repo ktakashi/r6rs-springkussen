@@ -101,7 +101,8 @@
 	    der-set? make-der-set
 	    (rename (der-set <der-set>)
 		    (%der-set der-set)
-		    (asn1-collection-elements der-set-elements))
+		    (asn1-collection-elements der-set-elements)
+		    (asn1-collection:add! der-set:add!))
 	    der-set-of?
 	    der-set->simple-asn1-encodable
 	    
@@ -245,7 +246,6 @@
     (make-der-set
      (filter values (map (lambda (acc) (acc asn1-encodable)) (cdr accs))))))
 
-
 ;; Simple value
 (define-record-type asn1-simple-object
   (parent asn1-object)
@@ -352,6 +352,10 @@
 	  (and (der-tagged-object? o)
 	       (= (der-tagged-object-tag-no o) tag-no)))
 	(asn1-collection-elements collection)))
+(define/typed (asn1-collection:add! (collection asn1-collection?)
+				    (element asn1-object?))
+  (asn1-collection-elements-set! collection
+    (cons element (asn1-collection-elements collection))))
 
 ;; Sequence
 (define-record-type der-sequence
