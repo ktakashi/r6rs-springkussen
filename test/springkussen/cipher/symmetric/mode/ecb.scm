@@ -210,6 +210,12 @@
     #(8 #x018310DC409B26D6 #x1D9D5C5018F728C2 #x5F4C038ED12B2E41)
     #(8 #x1C587F1C13924FEF #x305532286D6F295A #x63FAC0D034D9F793)))
 
+(define (->des2-key v)
+  `#(,(* (vector-ref v 0) 2)
+     ,(let ((bv (integer->bytevector (vector-ref v 1) 8)))
+	(bytevector->integer (bytevector-append bv bv)))
+     ,(vector-ref v 2)
+     ,(vector-ref v 3)))
 (define (->des3-key v)
   `#(,(* (vector-ref v 0) 3)
      ,(let ((bv (integer->bytevector (vector-ref v 1) 8)))
@@ -218,6 +224,8 @@
      ,(vector-ref v 3)))
 
 (for-each (lambda (v) (test-ecb des-descriptor v)) test-des-vectors)
+(for-each (lambda (v) (test-ecb desede-descriptor v))
+	  (map ->des2-key test-des-vectors))
 (for-each (lambda (v) (test-ecb desede-descriptor v))
 	  (map ->des3-key test-des-vectors))
 

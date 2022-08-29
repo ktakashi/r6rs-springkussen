@@ -104,12 +104,13 @@
 	(deskey key 16 #f (des3-key-ek2 symmetric-key))  ;; en
 	;; 2 key 3DES, k3=k1
 	(deskey key 0  #f (des3-key-ek2 symmetric-key))) ;; en
-    (deskey key 0 #t (des3-key-dk0 symmetric-key)) ;; en
+
+    (deskey key 0 #t (des3-key-dk2 symmetric-key)) ;; en
     (deskey key 8 #f (des3-key-dk1 symmetric-key)) ;; de
     (if (= keylen 24)
-	(deskey key 16 #t (des3-key-dk2 symmetric-key))  ;; en
+	(deskey key 16 #t (des3-key-dk0 symmetric-key))  ;; en
 	;; 2 key 3DES, k3=k1
-	(deskey key 0  #t (des3-key-dk2 symmetric-key))) ;; en
+	(deskey key 0  #t (des3-key-dk0 symmetric-key))) ;; en
     symmetric-key))
 
 (define (des3-encrypt pt ps ct cs key)
@@ -122,15 +123,15 @@
   (store32h ct (+ cs 0) (vector-ref work 0))
   (store32h ct (+ cs 4) (vector-ref work 1))
   8)
-(define (des3-decrypt pt ps ct cs key)
+(define (des3-decrypt ct cs pt ps key)
   (define work (make-vector 2))
-  (vector-set! work 0 (load32h pt (+ ps 0)))
-  (vector-set! work 1 (load32h pt (+ ps 4)))
+  (vector-set! work 0 (load32h ct (+ cs 0)))
+  (vector-set! work 1 (load32h ct (+ cs 4)))
   (desfunc work (des3-key-dk0 key))
   (desfunc work (des3-key-dk1 key))
   (desfunc work (des3-key-dk2 key))
-  (store32h ct (+ cs 0) (vector-ref work 0))
-  (store32h ct (+ cs 4) (vector-ref work 1))
+  (store32h pt (+ ps 0) (vector-ref work 0))
+  (store32h pt (+ ps 4) (vector-ref work 1))
   8)
 
 (define desede-descriptor
