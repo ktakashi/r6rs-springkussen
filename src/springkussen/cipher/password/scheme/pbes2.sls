@@ -86,9 +86,10 @@
   (symmetric-cipher:done! (pbes2-state-cipher state)))
 
 (define (select-key-length key-length*)
+  (define (pair/null? p) (or (pair? p) (null? p)))
   (cond ((number? key-length*) key-length*)
 	((pair? key-length*)
-	 (if (pair? (cdr key-length*))
+	 (if (pair/null? (cdr key-length*))
 	     ;; take the last one (the biggest)
 	     (let loop ((k key-length*))
 	       (if (null? (cdr k))
