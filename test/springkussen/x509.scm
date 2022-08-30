@@ -9,6 +9,17 @@
 
 (test-begin "X509")
 
+;; utility
+(test-equal "E=ktakashi@ymail.com,C=NL,ST=Zuid-Holland,CN=Springkussen\\ CA"
+	    (x509-distinguished-names->string
+	     (string->x509-distinguished-names "1.2.840.113549.1.9.1=#13126b74616b6173686940796d61696c2e636f6d,C=NL,ST=Zuid-Holland,CN=Springkussen CA")))
+
+(test-equal "1.2.840.113549.1.9.1=#13126b74616b6173686940796d61696c2e636f6d,C=NL,ST=Zuid-Holland,CN=Springkussen\\ CA"
+	    (x509-distinguished-names->string
+	     (string->x509-distinguished-names "1.2.840.113549.1.9.1=#13126b74616b6173686940796d61696c2e636f6d,C=NL,ST=Zuid-Holland,CN=Springkussen CA")
+	     *x509:rfc5280-names*))
+
+
 ;; test data from
 ;; https://fm4dd.com/openssl/certexamples.shtm
 ;; RSA 1024 and ECDSA sect571r1

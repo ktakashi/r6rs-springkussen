@@ -54,6 +54,9 @@
 	    make-x509-time x509-time?
 	    x509-name?
 	    make-x509-distinguished-names
+	    x509-distinguished-names->string
+	    string->x509-distinguished-names
+	    (rename (*rfc5280-symbols* *x509:rfc5280-names*))
 
 	    make-x509-self-signed-certificate
 
@@ -160,6 +163,8 @@
 (define (make-x509-time time) (t:make-x509-time (make-der-utc-time time)))
 
 (define (make-x509-distinguished-names . n) (list->x509-name n))
+(define x509-distinguished-names->string x509-name->string)
+(define string->x509-distinguished-names string->x509-name)
 
 (define make-x509-self-signed-certificate
   (case-lambda/typed
