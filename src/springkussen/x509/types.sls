@@ -92,27 +92,31 @@
 ;; RFC 5280 Section 4.1.2.4
 (define *rfc5280-symbols*
   '(
-    ("2.5.4.3"  . CN)			;; common name
-    ("2.5.4.4"  . SURNAME)		;; surname
-    ("2.5.4.5"  . SERIALNUMBER)		;; serial number
     ("2.5.4.6"  . C)			;; country
-    ("2.5.4.7"  . L)			;; locality
-    ("2.5.4.8"  . ST)			;; state or province name
+    ("0.9.2342.19200300.100.1.25" . DC) ;; domainComponent
     ("2.5.4.10" . O)			;; organization
     ("2.5.4.11" . OU)			;; organization unit
-    ("2.5.4.12" . T)			;; title
     ("2.5.4.26" . DN)			;; distinguished name qualifier
+    ("2.5.4.8"  . ST)			;; state or province name
+    ("2.5.4.3"  . CN)			;; common name
+    ("2.5.4.5"  . SERIALNUMBER)		;; serial number
+
+    ("2.5.4.7"  . L)			;; locality
+    ("2.5.4.12" . T)			;; title
+    ("2.5.4.4"  . SURNAME)		;; surname
     ("2.5.4.42" . GIVENNAME)		;; given name
     ("2.5.4.43" . INITIALS)		;; initials
     ("2.5.4.44" . GENERATION)		;; generation qualifier (e.g. "Jr.")
     ("2.5.4.65" . Pseudonym)		;; Pseudonym
+
+    ;; apparently, this is not in RFC 5280
+    ;; yet seems okay to have name...
+    ("2.5.4.9"  . STREET)		
     ))
 
 (define *default-symbols*
   `(,@*rfc5280-symbols*
-    ("2.5.4.9"  . STREET)		; apparently, this is not in RFC 5280
     ("1.2.840.113549.1.9.1"       . E)
-    ("0.9.2342.19200300.100.1.25" . DC)
     ("0.9.2342.19200300.100.1.1"  . UID)))
 (define (rdn->list rdn using-symbols)
   (define (->list av*)

@@ -45,7 +45,14 @@
 	    pkcs12-keystore-certificate-ref
 	    pkcs12-keystore-certificate-set!
 	    pkcs12-keystore-certificate-delete!
+	    pkcs12-keystore-certificate-revocation-list-ref
+	    pkcs12-keystore-certificate-revocation-list-set!
+	    pkcs12-keystore-certificate-revocation-list-delete!
 
+	    pkcs12-keystore-contains?
+	    pkcs12-keystore-alias-entries
+	    pkcs12-keystore-all-aliases
+	    
 	    pkcs12-keystore-add-attribute!
 	    pkcs12-keystore-delete-entry!
 	    
@@ -220,7 +227,8 @@
      (cert x509-certificate?))
     (let ((alias (x509-distinguished-names->string
 		  (apply make-x509-distinguished-names
-			 (x509-certificate:subject cert)))))
+			 (x509-certificate:subject cert))
+		  *x509:rfc5280-names*)))
       (pkcs12-keystore-certificate-set! keystore alias cert)))
    (((keystore pkcs12-keystore?)
      (alias string?)
@@ -235,6 +243,39 @@
 
 (define (pkcs12-keystore-certificate-delete! keystore alias)
   (pkcs12-keystore-delete-entry! keystore alias '(certificate)))
+
+(define/typed (pkcs12-keystore-certificate-revocation-list-ref
+	       (keystore pkcs12-keystore?)
+	       (alias string?))
+  (cond ((hashtable-ref (pkcs12-keystore-crls keystore) alias #f) =>
+	 (lambda (bag) (crl-bag-crl-value (safe-bag-bag-value bag))))
+	(else #f)))
+
+(define/typed (pkcs12-keystore-certificate-revocation-list-set!
+	       (keystore pkcs12-keystore?)
+	       (alias string?)
+	       (crl x509-certificate-revocation-list?))
+  (define (->entry ks crl alias)
+    (let* ((local-id (pkcs12-keystore-add-local-id! ks alias 'crl))
+	   (attrs (make-pkcs12-attributes alias local-id)))
+      (make-crl-safe-bag (make-crl-bag *x509-crl-bag-type* crl) attrs)))
+  (hashtable-set! (pkcs12-keystore-crls keystore) alias
+		  (->entry keystore crl alias)))
+
+(define (pkcs12-keystore-certificate-revocation-list-delete! keystore alias)
+  (pkcs12-keystore-delete-entry! keystore alias '(crl)))
+
+(define/typed (pkcs12-keystore-contains? (keystore pkcs12-keystore?)
+					 (alias string?))
+  (hashtable-contains? (pkcs12-keystore-aliases keystore) alias))
+
+(define/typed (pkcs12-keystore-alias-entries (keystore pkcs12-keystore?)
+					     (alias string?))
+  (cond ((hashtable-ref (pkcs12-keystore-aliases keystore) alias #f) => cdr)
+	(else #f)))
+
+(define/typed (pkcs12-keystore-all-aliases (keystore pkcs12-keystore?))
+  (vector->list (hashtable-keys (pkcs12-keystore-aliases keystore))))
 
 (define (entry-types? v)
   (if (list? v)
@@ -289,7 +330,7 @@
 		    (else (loop (cons (car t*) r) (cdr t*)))))))
 	#f)
       ;; Clean up
-      (unless (hashtable-ref aliases alias)
+      (unless (hashtable-ref aliases alias #t)
 	(hashtable-delete! aliases alias)))))
 
 (define *pbes2-oid* (make-der-object-identifier "1.2.840.113549.1.5.13"))
@@ -469,15 +510,7 @@
 	      aid))))
 
 (define (algorithm-identifier->pbe-cipher&parameter aid)
-  (define oid (algorithm-identifier-algorithm aid))
-  (define param (algorithm-identifier-parameters aid))
-  ;; PBES2
-  (if (string=? (der-object-identifier-value oid) "1.2.840.113549.1.5.13")
-      (let ((pbes2-parameter (asn1-object->pbes2-parameter param)))
-	(pbes2-parameter->pbe-cipher&parameter pbes2-parameter))
-      ;; Assuem PBES1
-      (aid->cipher&key-parameter aid)))
-	
+  (aid->cipher&key-parameter aid))
 
 ;;;; Internal implementation
 
@@ -899,6 +932,8 @@
 ;;     x509CRL,
 ;;     ... -- For future extensions
 ;; }
+(define *x509-crl-bag-type*
+  (make-der-object-identifier "1.2.840.113549.1.9.23.1"))
 (define-record-type crl-bag
   (parent <asn1-encodable-object>)
   (fields crl-id crl-value)
@@ -924,9 +959,9 @@
       (unless obj
 	(springkussen-assertion-violation 'asn1-object->crl-bag
 					"Invalid format"))
-      (make-cert-bag (car e)
-		     (bytevector->x509-certificate-revocation-list
-		      (der-octet-string-value (der-tagged-object-obj obj)))))))
+      (make-crl-bag (car e)
+		    (bytevector->x509-certificate-revocation-list
+		     (der-octet-string-value (der-tagged-object-obj obj)))))))
 
 ;; SecretBag ::= SEQUENCE {
 ;;     secretTypeId   BAG-TYPE.&id ({SecretTypes}),
@@ -996,11 +1031,17 @@
 	  (iv (derive-pkcs12-key md pw S c *iv-material* iv-size)))
       (bytevector-append dk iv))))
 
+(define (pbes2-cipher-creator aid)
+  (define param (algorithm-identifier-parameters aid))
+  (let ((pbes2-parameter (asn1-object->pbes2-parameter param)))
+    (pbes2-parameter->pbe-cipher&parameter pbes2-parameter)))
+
 (define *oid-cipher-creator*
   `(("1.2.840.113549.1.12.1.3" . ,(make-pbes1-cipher-creator *scheme:desede* 24))
     ("1.2.840.113549.1.12.1.4" . ,(make-pbes1-cipher-creator *scheme:desede* 16))
     ("1.2.840.113549.1.12.1.5" . ,(make-pbes1-cipher-creator *scheme:rc2* 16))
-    ("1.2.840.113549.1.12.1.6" . ,(make-pbes1-cipher-creator *scheme:rc2* 5))))
+    ("1.2.840.113549.1.12.1.6" . ,(make-pbes1-cipher-creator *scheme:rc2* 5))
+    ("1.2.840.113549.1.5.13" . ,pbes2-cipher-creator)))
 
 
 ;;;; Appendix B. Deriving Keys and IVs from Passwords and Salt
