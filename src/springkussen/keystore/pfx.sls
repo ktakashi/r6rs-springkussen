@@ -41,10 +41,13 @@
 	    
 	    pkcs12-keystore-private-key-ref
 	    pkcs12-keystore-private-key-set!
+	    pkcs12-keystore-private-key-delete!
 	    pkcs12-keystore-certificate-ref
 	    pkcs12-keystore-certificate-set!
+	    pkcs12-keystore-certificate-delete!
 
 	    pkcs12-keystore-add-attribute!
+	    pkcs12-keystore-delete-entry!
 	    
 	    pkcs12-mac-descriptor? make-pkcs12-mac-descriptor
 
@@ -202,21 +205,36 @@
       (hashtable-set! private-keys alias
 		      (->entry pki password alias local-id))))))
 
+(define (pkcs12-keystore-private-key-delete! keystore alias)
+  (pkcs12-keystore-delete-entry! keystore alias '(private-key)))
+
 (define/typed (pkcs12-keystore-certificate-ref (keystore pkcs12-keystore?)
-					      (alias string?))
+					       (alias string?))
   (cond ((hashtable-ref (pkcs12-keystore-certificates keystore) alias #f) =>
 	 (lambda (bag) (cert-bag-cert-value (safe-bag-bag-value bag))))
 	(else #f)))
-(define/typed (pkcs12-keystore-certificate-set! (keystore pkcs12-keystore?)
-						(alias string?)
-						(cert x509-certificate?))
-  (define (->entry ks cert alias)
-    (let* ((local-id (pkcs12-keystore-add-local-id! ks alias 'certificate))
-	   (attrs (make-pkcs12-attributes alias local-id)))
-      (make-cert-safe-bag (make-x509-cert-bag cert) attrs)))
 
-  (hashtable-set! (pkcs12-keystore-certificates keystore) alias
-		  (->entry keystore cert alias)))
+(define pkcs12-keystore-certificate-set!
+  (case-lambda/typed
+   (((keystore pkcs12-keystore?)
+     (cert x509-certificate?))
+    (let ((alias (x509-distinguished-names->string
+		  (apply make-x509-distinguished-names
+			 (x509-certificate:subject cert)))))
+      (pkcs12-keystore-certificate-set! keystore alias cert)))
+   (((keystore pkcs12-keystore?)
+     (alias string?)
+     (cert x509-certificate?))
+    (define (->entry ks cert alias)
+      (let* ((local-id (pkcs12-keystore-add-local-id! ks alias 'certificate))
+	     (attrs (make-pkcs12-attributes alias local-id)))
+	(make-cert-safe-bag (make-x509-cert-bag cert) attrs)))
+    
+    (hashtable-set! (pkcs12-keystore-certificates keystore) alias
+		    (->entry keystore cert alias)))))
+
+(define (pkcs12-keystore-certificate-delete! keystore alias)
+  (pkcs12-keystore-delete-entry! keystore alias '(certificate)))
 
 (define (entry-types? v)
   (if (list? v)
@@ -253,6 +271,26 @@
 		(cond ((hashtable-ref storage alias #f) =>
 		       (lambda (bag) (safe-bag-add-attribute! bag attribute)))))
 	      (entry-types->storages keystore entry-types)))))
+
+(define/typed (pkcs12-keystore-delete-entry! (keystore pkcs12-keystore?)
+					     (alias string?)
+					     (entry-types entry-types?))
+  (define aliases (pkcs12-keystore-aliases keystore))
+  (for-each (lambda (storage) (hashtable-delete! storage alias))
+	    (entry-types->storages keystore entry-types))
+  (let ((et* (if (pair? entry-types) entry-types (enum-set->list entry-types))))
+    (when (hashtable-contains? aliases alias)
+      (hashtable-update! aliases alias
+	(lambda (v)
+	  (let ((id (car v)))
+	    (let loop ((r '()) (t* (cdr v)))
+	      (cond ((null? t*) (if (null? r) #f (cons id r)))
+		    ((memq (car t*) et*) (loop r (cdr t*)))
+		    (else (loop (cons (car t*) r) (cdr t*)))))))
+	#f)
+      ;; Clean up
+      (unless (hashtable-ref aliases alias)
+	(hashtable-delete! aliases alias)))))
 
 (define *pbes2-oid* (make-der-object-identifier "1.2.840.113549.1.5.13"))
 (define (ensure-asn1-object o)

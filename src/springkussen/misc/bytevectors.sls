@@ -37,12 +37,13 @@
 	    bytevector-safe=?
 	    bytevector-split-at*
 	    bytevector->hex-string
+	    hex-string->bytevector
 	    )
     (import (rnrs))
 
 (define sub-bytevector
   (case-lambda
-   ((bv start) (sub-bytevector bv 0 (bytevector-length bv)))
+   ((bv start) (sub-bytevector bv start (bytevector-length bv)))
    ((bv start end)
     (let ((r (make-bytevector (- end start))))
       (bytevector-copy! bv start r 0 (- end start))
@@ -196,5 +197,27 @@
 	     (lo (bitwise-and b #x0F)))
 	(put-char out (hex->char hi))
 	(put-char out (hex->char lo))))))
+
+(define (hex-string->bytevector str)
+  (define (safe-ref s i)
+    (if (< i 0) #\0 (string-ref s i)))
+  (define (->hex c)
+    (let ((c (char-upcase c)))
+      (cond ((memv c '(#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9))
+	     (- (char->integer c) (char->integer #\0)))
+	    ((memv c '(#\A #\B #\C #\D #\E #\F))
+	     (- (char->integer c) #x37))
+	    (else (assertion-violation 'hex-string->bytevector
+				       "non hex character" c str)))))
+  (let* ((len (string-length str))
+	 (bv (make-bytevector (ceiling (/ len 2)))))
+    (let loop ((i (- (bytevector-length bv) 1)) (j (- len 1)))
+      (if (< i 0)
+	  bv
+	  (let ((h (->hex (safe-ref str (- j 1))))
+		(l (->hex (safe-ref str j))))
+	    (bytevector-u8-set! bv i 
+	      (bitwise-ior (bitwise-arithmetic-shift h 4) l))
+	    (loop (- i 1) (- j 2)))))))
 )
 

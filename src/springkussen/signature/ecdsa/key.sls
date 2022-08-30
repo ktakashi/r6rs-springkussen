@@ -108,7 +108,7 @@
   (define (read-random-bits prng nbits)
     (let ((bv (random-generator:read-random-bytes prng (div nbits 8))))
       (bytevector->uinteger bv (endianness big))))
-  (define ec-parameter (key-parameter-ec-parameter key-parameter))
+  (define ec-parameter (key-parameter-ec-parameter key-parameter secp256r1))
   (define prng
     (key-parameter-random-generator key-parameter default-random-generator))
 

@@ -35,7 +35,7 @@
 	    bytevector-append
 	    hex-string->bytevector)
     (import (rnrs)
-	    ;; for bytevector-append
+	    ;; for bytevector-append and hex-string->bytevector
 	    (springkussen misc bytevectors))
 
 (define (integer->bytevector integer size)
@@ -53,27 +53,5 @@
 	(loop (+ i 1)
 	      (bitwise-ior (bitwise-arithmetic-shift r 8)
 			   (bytevector-u8-ref bv i))))))
-
-(define (hex-string->bytevector str)
-  (define (safe-ref s i)
-    (if (< i 0) #\0 (string-ref s i)))
-  (define (->hex c)
-    (let ((c (char-upcase c)))
-      (cond ((memv c '(#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9))
-	     (- (char->integer c) (char->integer #\0)))
-	    ((memv c '(#\A #\B #\C #\D #\E #\F))
-	     (- (char->integer c) #x37))
-	    (else (assertion-violation 'hex-string->bytevector
-				       "non hex character" c str)))))
-  (let* ((len (string-length str))
-	 (bv (make-bytevector (ceiling (/ len 2)))))
-    (let loop ((i (- (bytevector-length bv) 1)) (j (- len 1)))
-      (if (< i 0)
-	  bv
-	  (let ((h (->hex (safe-ref str (- j 1))))
-		(l (->hex (safe-ref str j))))
-	    (bytevector-u8-set! bv i 
-	      (bitwise-ior (bitwise-arithmetic-shift h 4) l))
-	    (loop (- i 1) (- j 2)))))))
 
 )
