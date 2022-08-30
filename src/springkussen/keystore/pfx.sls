@@ -59,7 +59,7 @@
 	    pkcs12-mac-descriptor? make-pkcs12-mac-descriptor
 
 	    ;; For Java trusted cert...
-	    make-java-trusted-certificate-id-attribute
+	    *java-trusted-certificate-attribute*
 
 	    ;; For whatever the reason...
 	    *pkcs12-pbe/sha1-and-des3-cbc*
@@ -801,6 +801,8 @@
 	      (lambda ()
 	        ((n *java-trusted-certificate-id*
 		    (der-set *any-extended-key-usage*)))))))
+(define *java-trusted-certificate-attribute*
+  (make-java-trusted-certificate-id-attribute))
 
 (define (make-pkcs12-attributes alias local-id)
   (der-set
@@ -823,7 +825,7 @@
 	     (make-pkcs12-local-key-id-attribute
 	      (car (asn1-collection-elements set))))
 	    ((asn1-object=? oid *java-trusted-certificate-id*)
-	     (make-java-trusted-certificate-id-attribute))
+	     *java-trusted-certificate-attribute*)
 	    (else (make-pkcs12-attribute oid set))))))
 
 (define (handle-safe-bag id attrs asn1-object)
