@@ -48,6 +48,9 @@
 	    pkcs12-keystore-certificate-revocation-list-ref
 	    pkcs12-keystore-certificate-revocation-list-set!
 	    pkcs12-keystore-certificate-revocation-list-delete!
+	    pkcs12-keystore-secret-key-ref
+	    pkcs12-keystore-secret-key-set!
+	    pkcs12-keystore-secret-key-delete!
 
 	    pkcs12-keystore-contains?
 	    pkcs12-keystore-alias-entries
@@ -73,6 +76,7 @@
 	    (springkussen conditions)
 	    (springkussen cms)
 	    (springkussen cipher password)
+	    (springkussen cipher symmetric)
 	    (springkussen digest)
 	    (springkussen mac)
 	    (springkussen random)
@@ -162,14 +166,7 @@
 	(springkussen-error 'pkcs12-keystore-private-key-ref
 			    "Key is encrypted but no password is provided"))
       (if (cms-encrypted-private-key-info? key)
-	  (let ((aid (cms-encrypted-private-key-info-encryption-algorithm key))
-		(data (cms-encrypted-private-key-info-encrypted-data key)))
-	    (let-values (((cipher param)
-			  (algorithm-identifier->pbe-cipher&parameter aid)))
-	      (bytevector->cms-private-key-info
-	       (symmetric-cipher:decrypt-bytevector
-		cipher (make-pbe-key password)
-		param (der-octet-string-value data)))))
+	  (decrypt-encrypted-private-key-info key password)
 	  ;; non-encrypted private-key
 	  key))
     (let ((private-keys (pkcs12-keystore-private-keys keystore)))
@@ -193,12 +190,7 @@
      encryption-algorithm)
     (define (encrypt keystore alg pki password)
       (define prng (pkcs12-keystore-prng keystore))
-      (let ((bv (asn1-object->bytevector pki)))
-	(let-values (((data aid) (encrypt-bytevector alg prng bv password)))
-	  ;; make sure we have pure ASN.1 object, without encodable
-	  (make-cms-encrypted-private-key-info
-	   aid
-	   (make-der-octet-string data)))))
+      (encrypt-private-key-info alg pki password prng))
     (define (->entry pki password alias local-id)
       (define attrs (make-pkcs12-attributes alias local-id))
       (if password
@@ -264,6 +256,75 @@
 
 (define (pkcs12-keystore-certificate-revocation-list-delete! keystore alias)
   (pkcs12-keystore-delete-entry! keystore alias '(crl)))
+
+
+(define pkcs12-keystore-secret-key-ref
+  (case-lambda/typed
+   ((keystore alias) (pkcs12-keystore-secret-key-ref keystore alias #f))
+   (((keystore pkcs12-keystore?)
+     (alias string?)
+     (password (or #f string?)))
+    (define (private-key-info->symmetric-key pki)
+      ;; TODO maybe password as well?
+      ;; TODO check oid?
+      (make-symmetric-key
+       (der-octet-string-value (cms-one-asymmetric-key-private-key pki))))
+    (define (handle-secret-bag secret-bag)
+      (define value (secret-bag-secret-value (safe-bag-bag-value secret-bag)))
+      (cond ((cms-encrypted-private-key-info? value)
+	     ;; decrypt
+	     (unless password
+	       (springkussen-assertion-violation 'pkcs12-keystore-secret-key-ref
+		 "Encrypted secret key requires password"))
+	     (private-key-info->symmetric-key
+	      (decrypt-encrypted-private-key-info value password)))
+	    ((cms-private-key-info? value)
+	     (private-key-info->symmetric-key value))
+	    (else
+	     (springkussen-error 'pkcs12-keystore-secret-key-ref
+				 "[BUG] Unknown bag type in secret safe"
+				 secret-bag))))
+    (cond ((hashtable-ref (pkcs12-keystore-secret-keys keystore) alias #f) =>
+	   handle-secret-bag)
+	  (else #f)))))
+
+(define *aes-oid* (make-der-object-identifier "2.16.840.1.101.3.4.1"))
+(define pkcs12-keystore-secret-key-set!
+  (case-lambda/typed
+   ((keystore alias secret-key)
+    (pkcs12-keystore-secret-key-set! keystore alias secret-key #f))
+   ((keystore alias secret-key password)
+    (pkcs12-keystore-secret-key-set! keystore alias secret-key password
+				     *pbes2-aes256-cbc-pad/hmac-sha256*))
+   (((keystore pkcs12-keystore?)
+     (alias string?)
+     (secret-key symmetric-key?)
+     (password (or #f string?))
+     encryption-algorithm)
+    (define (->entry pki password alias local-id)
+      (define attrs (make-pkcs12-attributes alias local-id))
+      (let-values (((id content)
+		    (if password
+			(let ((prng (pkcs12-keystore-prng keystore)))
+			  (values *pkcs8-shrouded-key-bag-id*
+				  (encrypt-private-key-info encryption-algorithm
+							    pki password prng)))
+			(values *key-bag-id* pki))))
+	(make-secret-safe-bag (make-secret-bag id content) attrs)))
+    ;; we use AES for all symmetric-keys for now
+    ;; OID = 2.16.840.1.101.3.4.1
+    (let ((pki (make-cms-private-key-info
+		(make-der-integer 0)
+		(make-algorithm-identifier *aes-oid*)
+		(make-der-octet-string (symmetric-key-raw-value secret-key))))
+	  (lid (pkcs12-keystore-add-local-id! keystore alias 'secret-key))
+	  (secret-keys (pkcs12-keystore-secret-keys keystore)))
+      (let ((e (->entry pki password alias lid)))
+	(hashtable-set! secret-keys alias e))))))
+
+(define (pkcs12-keystore-secret-key-delete! keystore alias)
+  (pkcs12-keystore-delete-entry! keystore alias '(secret-key)))
+
 
 (define/typed (pkcs12-keystore-contains? (keystore pkcs12-keystore?)
 					 (alias string?))
@@ -501,6 +562,21 @@
 		(make-der-octet-string mac))
 	       (make-der-octet-string salt)
 	       (make-der-integer c)))))
+
+(define (encrypt-private-key-info alg pki password prng)
+  (let ((bv (asn1-object->bytevector pki)))
+    (let-values (((data aid) (encrypt-bytevector alg prng bv password)))
+      ;; make sure we have pure ASN.1 object, without encodable
+      (make-cms-encrypted-private-key-info aid (make-der-octet-string data)))))
+
+(define (decrypt-encrypted-private-key-info key password)
+  (let ((aid (cms-encrypted-private-key-info-encryption-algorithm key))
+	(data (cms-encrypted-private-key-info-encrypted-data key)))
+    (let-values (((cipher param)
+		  (algorithm-identifier->pbe-cipher&parameter aid)))
+      (bytevector->cms-private-key-info
+       (symmetric-cipher:decrypt-bytevector cipher (make-pbe-key password)
+	param (der-octet-string-value data))))))
 
 (define (encrypt-bytevector alg prng bv password)
   (let ((key (make-pbe-key password))
@@ -830,7 +906,6 @@
 
 (define (handle-safe-bag id attrs asn1-object)
   (define oid (der-object-identifier-value id))
-
   (cond ((string=? oid "1.2.840.113549.1.12.10.1.1")
 	 (make-key-safe-bag (asn1-object->key-bag asn1-object) attrs))
 	((string=? oid "1.2.840.113549.1.12.10.1.2")
@@ -996,7 +1071,7 @@
 	 (obj (bytevector->asn1-object
 	       (der-octet-string-value (der-tagged-object-obj v))))
 	 (oid (car (asn1-collection-elements asn1-object))))
-    (make-secret-bag oid (handle-safe-bag oid #f obj))))
+    (make-secret-bag oid (safe-bag-bag-value (handle-safe-bag oid #f obj)))))
 
 
 (define (aid->cipher&key-parameter aid)

@@ -51,6 +51,7 @@
 	    symmetric-cipher:done!
 	    
 	    symmetric-key? make-symmetric-key
+	    symmetric-key-raw-value
 	    
 	    ;; Scheme descriptors
 	    symmetric-scheme-descriptor?
