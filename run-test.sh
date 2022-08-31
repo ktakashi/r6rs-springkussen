@@ -2,17 +2,7 @@
 
 declare -a implementations=($(scheme-env list -l))
 
-echo "Preparing for Chez Scheme"
-create_symlink() {
-    flag=$1
-    target=$2
-    src=$3
-    if [ ! ${flag} ${src} ]; then
-	ln -s ${target} ${src}
-    fi
-}
-create_symlink -f %3a64.chezscheme.sls test/lib/srfi/:64.sls
-create_symlink -d %3a64 test/lib/srfi/:64
+./test/bin/pre-test.sh
 
 check_output() {
     local status=0
@@ -26,6 +16,8 @@ check_output() {
     return ${status}
 }
 
+DATA_DIR=$(readlink -f test/data)
+
 EXIT_STATUS=0
 
 for impl in ${implementations[@]}; do
@@ -36,26 +28,19 @@ for impl in ${implementations[@]}; do
 	scheme-env run ${impl} \
 		   --loadpath src \
 		   --loadpath test/lib \
-		   --standard r6rs --program ${file} | check_output
-	
+		   --standard r6rs \
+		   --program ${file} --  $DATA_DIR | check_output
+	TMP=$?
 	# Do nothing
 	case ${EXIT_STATUS} in
-	    0) EXIT_STATUS=$? ;;
+	    0) EXIT_STATUS=$TMP ;;
 	esac
     done
     echo Done!
     echo
 done
 
-delete_link() {
-    target=$1
-    if [ -s ${target} ]; then
-	rm ${target}
-    fi
-}
-
-delete_link test/lib/srfi/:64.sls
-delete_link test/lib/srfi/:64
+./test/bin/post-test.sh
 
 echo Library test status ${EXIT_STATUS}
 exit ${EXIT_STATUS}

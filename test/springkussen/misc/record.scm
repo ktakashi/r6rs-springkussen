@@ -11,4 +11,4 @@
   (test-equal 'ok (foo-bar (foo-builder (bar 'ok)))))
 
 (test-end)
-(exit (zero? (test-runner-fail-count (test-runner-current))))
+(exit (test-runner-fail-count (test-runner-current)))

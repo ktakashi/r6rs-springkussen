@@ -109,6 +109,6 @@
 (for-each (lambda (v) (test-cbc aes-256-descriptor v)) test-aes-256-vector)
 
 (test-end)
-(exit (zero? (test-runner-fail-count (test-runner-current))))
+(exit (test-runner-fail-count (test-runner-current)))
 
 

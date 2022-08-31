@@ -77,4 +77,4 @@
   (test-assert (ecdsa-public-key? (key-pair-public kp))))
 
 (test-end)
-(exit (zero? (test-runner-fail-count (test-runner-current))))
+(exit (test-runner-fail-count (test-runner-current)))

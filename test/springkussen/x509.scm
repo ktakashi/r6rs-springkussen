@@ -306,4 +306,4 @@
 	(test-equal 2 (length (x509-certificate-revocation-list:revoked-certificates crl2)))))))
 
 (test-end)
-(exit (zero? (test-runner-fail-count (test-runner-current))))
+(exit (test-runner-fail-count (test-runner-current)))

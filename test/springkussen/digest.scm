@@ -45,4 +45,4 @@
 		     (make-bytevector (digest-descriptor-digest-size desc))))))
 
 (test-end)
-(exit (zero? (test-runner-fail-count (test-runner-current))))
+(exit (test-runner-fail-count (test-runner-current)))

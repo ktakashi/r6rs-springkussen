@@ -99,4 +99,4 @@
       (test-equal modulus (rsa-private-key-modulus key)))))
 
 (test-end)
-(exit (zero? (test-runner-fail-count (test-runner-current))))
+(exit (test-runner-fail-count (test-runner-current)))
