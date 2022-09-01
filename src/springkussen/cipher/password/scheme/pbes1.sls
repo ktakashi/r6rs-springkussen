@@ -53,7 +53,7 @@
   (define dk-len
     (or (pbe-cipher-parameter-key-size param #f)
 	(select-key-length (symmetric-scheme-descriptor-key-length* scheme))))
-  (define kdf (or (pbe-cipher-parameter-kdf param #f) (make-pbkdf-1 #f)))
+  (define kdf (or (pbe-cipher-parameter-kdf param #f) (make-pbkdf-1 param)))
   (define iteration (pbe-cipher-parameter-iteration param *default-iteration*))
 
   (unless (string? password)

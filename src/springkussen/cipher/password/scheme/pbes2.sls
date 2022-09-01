@@ -57,7 +57,7 @@
 
 (define (pbes2-init scheme op password param)
   (define salt (pbe-cipher-parameter-salt param))
-  (define kdf (or (pbe-cipher-parameter-kdf param #f) (make-pbkdf-2 #f)))
+  (define kdf (or (pbe-cipher-parameter-kdf param #f) (make-pbkdf-2 param)))
   (define iteration (pbe-cipher-parameter-iteration param *default-iteration*))
   (define dk-len
     (or (pbe-cipher-parameter-key-size param #f)

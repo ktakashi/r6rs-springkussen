@@ -136,8 +136,6 @@
       ;; we have certificate entries for these two
       (test-assert (pkcs12-keystore-contains? ks2 "springkussen ec"))
       (test-assert (pkcs12-keystore-contains? ks2 "springkussen rsa"))
-      ;; TODO there should be a rule to emit this properly, but couldn't
-      ;;      figure it out yet
       ;; Chain stays, we consider it as a different entry
       (test-assert (pkcs12-keystore-contains? ks2
       		    (x509-distinguished-names->string

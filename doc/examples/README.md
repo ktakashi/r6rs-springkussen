@@ -8,4 +8,5 @@ may require `(springkussen signature)` or `(springkussen cipher asymmetric)`)
 
 The below are the list of the categories and its directory:
 
+- [Password Based Encryption](./cipher/password)
 - [X.509](./x509)
