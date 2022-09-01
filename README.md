@@ -14,7 +14,7 @@ cryptographic operations, including PKCS and/or PKI.
 Document
 --------
 
-See [./doc/README.md](./doc/REAMDE.md)
+See [./doc/README.md](./doc/README.md)
 
 If you are interested in enhancing the library, please also refer the
 implementation note: [Implementation notes](./doc/notes.md)
