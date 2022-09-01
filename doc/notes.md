@@ -15,7 +15,7 @@ have a mechanism to check if the implementation supports SRFI-18 or not.
 And if so, uses the procedures otherwise using dummy implementations.
 See the `(springkussen misc lock)` library:
 
-- [`src/springkussen/misc/lock.sls`](src/springkussen/misc/lock.sls)
+- [`src/springkussen/misc/lock.sls`](../src/springkussen/misc/lock.sls)
 
 As far as I know, the current active implementations which don't support
 SRFI-18 are actually only Chez Scheme. So, we put special treatment
@@ -33,10 +33,23 @@ we can't diverse the random generator seed.
 
 To make it work, we need to make the below file implementation specific:
 
-- [`src/springkussen/random/system.sls`](src/springkussen/random/system.sls)
+- [`src/springkussen/random/system.sls`](../src/springkussen/random/system.sls)
 
 At this moment, the below implementations works on the platform which
 they support:
 
 - Sagittarius
 
+
+Security consideration
+======================
+
+Iteration count of PBE
+----------------------
+
+By default the iteration count is `1024`. This might be a bit too small
+comparing to modern cryptographic libraries. For example, Java JCE uses
+`10000` to `100000`. The purpose for the small number is that not all
+Scheme implementations are native compilers and using `100000` iteration
+may end up over `200000000` loop of digest, which takes unbearable amount
+of time to compute.
