@@ -139,13 +139,13 @@
       ;; TODO there should be a rule to emit this properly, but couldn't
       ;;      figure it out yet
       ;; Chain stays, we consider it as a different entry
-      ;; (test-assert (pkcs12-keystore-contains? ks2
-      ;; 		    (x509-distinguished-names->string
-      ;; 		     (apply make-x509-distinguished-names
-      ;; 			    (x509-certificate:issuer
-      ;; 			     (pkcs12-keystore-certificate-ref
-      ;; 			      ks "springkussen chain")))
-      ;; 		     *x509:rfc5280-names*)))
+      (test-assert (pkcs12-keystore-contains? ks2
+      		    (x509-distinguished-names->string
+      		     (apply make-x509-distinguished-names
+      			    (x509-certificate:issuer
+      			     (pkcs12-keystore-certificate-ref
+      			      ks "springkussen chain")))
+      		     *x509:rfc5280-names*)))
       (test-assert (ecdsa-private-key?
 		    (pkcs12-keystore-private-key-ref ks2 "ec nopass")))
       (test-assert (ecdsa-private-key?
