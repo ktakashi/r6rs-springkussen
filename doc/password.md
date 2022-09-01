@@ -213,3 +213,42 @@ the _parameter_.
 _digest_ must be a digest descriptor.
 
 Creates a partial parameter of HMAC for `mac->pbkdf2-prf`.
+
+Re-exported bindings
+--------------------
+
+The below bindings are re-exported from `(springkussen cipher symmetric)`
+for convenience.
+
+###### [Re-exported] `symmetric-cipher?`
+###### [Re-exported] `symmetric-cipher:encrypt-bytevector`
+###### [Re-exported] `symmetric-cipher:decrypt-bytevector`
+###### [Re-exported] `symmetric-cipher-operation`
+###### [Re-exported] `symmetric-cipher:init!`
+###### [Re-exported] `symmetric-cipher:encrypt`
+###### [Re-exported] `symmetric-cipher:encrypt!`
+###### [Re-exported] `symmetric-cipher:encrypt-last-block`
+###### [Re-exported] `symmetric-cipher:encrypt-last-block!`
+###### [Re-exported] `symmetric-cipher:decrypt`
+###### [Re-exported] `symmetric-cipher:decrypt!`
+###### [Re-exported] `symmetric-cipher:decrypt-last-block`
+###### [Re-exported] `symmetric-cipher:decrypt-last-block!`
+###### [Re-exported] `symmetric-cipher:done!`
+###### [Re-exported] `symmetric-scheme-descriptor?`
+###### [Re-exported] `symmetric-scheme-descriptor-name`
+###### [Re-exported] `symmetric-scheme-descriptor-block-size`
+###### [Re-exported] `*scheme:aes*`
+###### [Re-exported] `*scheme:aes-128*`
+###### [Re-exported] `*scheme:aes-192*`
+###### [Re-exported] `*scheme:aes-256*`
+###### [Re-exported] `*scheme:des*`
+###### [Re-exported] `*scheme:desede*`
+###### [Re-exported] `*scheme:rc2*`
+###### [Re-exported] `*scheme:rc5*`
+###### [Re-exported] `make-cipher-parameter`
+###### [Re-exported] `cipher-parameter?`
+###### [Re-exported] `mode-parameter?`
+###### [Re-exported] `make-iv-paramater`
+###### [Re-exported] `iv-parameter?`
+###### [Re-exported] `pkcs7-padding`
+###### [Re-exported] `no-padding`
