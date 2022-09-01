@@ -257,7 +257,7 @@
     (springkussen-assertion-violation 'string->x509-name "string required" s))
   (let loop ((tokens '()) (index 0))
     (if (= index (string-length s))
-	(list->x509-name (reverse tokens))
+	(list->x509-name tokens)
 	(let*-values (((name next) (parse-name s index))
 		      ((value next) (parse-value s next)))
 	  (loop (cons (list name value) tokens) next)))))
