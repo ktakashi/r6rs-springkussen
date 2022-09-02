@@ -2,9 +2,9 @@
 
 declare -a implementations=($(scheme-env list -l))
 
-set -o pipefail
-
 ./test/bin/pre-test.sh
+
+set -o pipefail
 
 check_output() {
     local status=0
@@ -46,8 +46,6 @@ run_dir() {
     done
 }
 
-./test/bin/post-test.sh
-
 run_dir test "Testing with"
 
 echo Library test status ${EXIT_STATUS}
@@ -55,5 +53,7 @@ echo Library test status ${EXIT_STATUS}
 run_dir doc/examples "Running examples"
 
 echo Examples execution status ${EXIT_STATUS}
+
+./test/bin/post-test.sh
 
 exit ${EXIT_STATUS}

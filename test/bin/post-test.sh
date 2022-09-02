@@ -2,8 +2,8 @@
 
 delete_link() {
     target=$1
-    if [ -s ${target} ]; then
-	rm ${target}
+    if [ -s "${target}" ]; then
+	rm "${target}"
     fi
 }
 
