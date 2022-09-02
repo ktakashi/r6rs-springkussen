@@ -38,8 +38,8 @@
 ;; environment (Mac), so this means, we need to do the same trick as
 ;; vanilla...
 (define make-lock (binding (chezscheme) make-mutex (lambda () (list 'dummy))))
-(define mutex-acquire (binding (chezscheme) mutex-acquire (lambda (m b) m)))
-(define mutex-release  (binding (srfi :18) mutex-release (lambda (m) m)))
+(define lock-acquire (binding (chezscheme) mutex-acquire (lambda (m b) m)))
+(define lock-release  (binding (chezscheme) mutex-release (lambda (m) m)))
   
 (define-syntax with-lock
   (syntax-rules ()
@@ -47,11 +47,10 @@
      (let ((m lock))
        (define (thunk) body0 body* ...)
        (guard (e (else (mutex-release m) (raise e)))
-	 (mutex-acquire m #t)
+	 (lock-acquire m #t)
 	 (let ((r (thunk)))
-	   (mutex-release m)
+	   (lock-release m)
 	   r))))))
-
 
 )
 
