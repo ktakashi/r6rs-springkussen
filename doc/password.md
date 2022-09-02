@@ -5,7 +5,7 @@ This library provides password based encryption (PBE) cipher and its APIs.
 
 Below is an example to encrypt an arbitary text.
 
-```
+```scheme
 #!r6rs
 (import (rnrs)
         (springkussen cipher password))

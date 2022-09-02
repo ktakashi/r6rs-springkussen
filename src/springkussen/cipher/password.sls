@@ -230,16 +230,21 @@
 (define/typed (pbes2-parameter->pbe-cipher&parameter
 	       (parameter pbes2-parameter?))
   (define key-derivation (pbes2-parameter-key-derivation parameter))
-  (define (scheme&iv parameter)
+  (define (scheme&parameter parameter)
     (define aid (pbes2-parameter-encryption-scheme parameter))
-    (let ((oid (der-object-identifier-value
-		(algorithm-identifier-algorithm aid)))
-	  (iv (der-octet-string-value (algorithm-identifier-parameters aid))))
-      (values (cond ((assoc oid *enc-oids*) => cdr)
-		    (else (springkussen-error
-			   'pbes2-parameter->pbe-cipher&parameter
-			   "Unsupported encryption" oid)))
-	      iv)))
+    (define (get-scheme oid)
+      (cond ((assoc oid *enc-oids*) => cdr)
+	    (else (springkussen-error
+		   'pbes2-parameter->pbe-cipher&parameter
+		   "Unsupported encryption" oid))))
+    (define (get-param scheme param)
+      ((cond ((assoc scheme *cipher-parameter*) => cdr)
+	    (else (springkussen-error
+		   'pbes2-parameter->pbe-cipher&parameter
+		   "Unsupported encryption" scheme))) param))
+    (let ((enc (get-scheme (der-object-identifier-value
+			       (algorithm-identifier-algorithm aid)))))
+      (values enc (get-param enc (algorithm-identifier-parameters aid)))))
   (define (parse-key-derivation param)
     (define (get-prf-digest aid)
       (define oid (der-object-identifier-value
@@ -261,12 +266,12 @@
     (unless (string=? "1.2.840.113549.1.5.12" kdf-oid)
       (springkussen-assertion-violation 'pbes2-parameter->pbe-cipher
 					"Only PBKDF2 is supported" kdf-oid))
-    (let-values (((scheme iv) (scheme&iv parameter))
+    (let-values (((scheme cipher-param) (scheme&parameter parameter))
 		 ((salt iteration key-length md) (parse-key-derivation param)))
       (values (make-pbe-cipher pbes2-scheme-descriptor
 	       (make-pbe-cipher-encryption-scheme-parameter scheme))
 	      (make-cipher-parameter
-	       (make-iv-paramater iv)
+	       cipher-param
 	       (make-pbes2-cipher-encryption-mode-parameter *mode:cbc*)
 	       (make-pbe-cipher-salt-parameter salt)
 	       (make-pbe-cipher-iteration-parameter iteration)
@@ -279,18 +284,92 @@
 
 (define *enc-oids*
   `(
-    ("2.16.840.1.101.3.4.1.2" .  ,*scheme:aes-128*) ;; AES128-CBC-Pad
+    ("2.16.840.1.101.3.4.1.2"  . ,*scheme:aes-128*) ;; AES128-CBC-Pad
     ("2.16.840.1.101.3.4.1.22" . ,*scheme:aes-192*) ;; AES192-CBC-Pad
     ("2.16.840.1.101.3.4.1.42" . ,*scheme:aes-256*) ;; AES256-CBC-Pad
+    ("1.2.840.113549.3.2"      . ,*scheme:rc2*)	    ;; RC2-CBC-Pad
+    ("1.2.840.113549.3.9"      . ,*scheme:rc5*)	    ;; RC5-CBC-Pad
+    ("1.3.14.3.2.7"            . ,*scheme:des*)	    ;; DES-CBC-Pad
+    ("1.2.840.113549.3.7"      . ,*scheme:desede*)  ;; DES-EDE3-CBC-Pad
     ))
+
+(define (->rc2-cbc-parameter iv key-length)
+  (define bits (* key-length 8))
+  (der-sequence
+   (make-der-integer (case bits
+		       ((40) 160)
+		       ((64) 120)
+		       ((128) 58)
+		       (else bits)))
+   (make-der-octet-string iv)))
+(define (->rc5-cbc-parameter iv key-length)
+  (der-sequence
+   (make-der-integer 16)
+   ;; TODO maybe we should care about this?
+   (make-der-integer 12)
+   (make-der-integer 64) ;; we don't support 128 bit RC5
+   (make-der-octet-string iv)))
+(define (->iv-parameter iv key-length) (make-der-octet-string iv))
+(define *enc-parameter*
+  `(
+    (,*scheme:rc2*     . ,->rc2-cbc-parameter)
+    (,*scheme:rc5*     . ,->rc5-cbc-parameter)
+    (,*scheme:aes-128* . ,->iv-parameter)
+    (,*scheme:aes-192* . ,->iv-parameter)
+    (,*scheme:aes-256* . ,->iv-parameter)
+    (,*scheme:des*     . ,->iv-parameter)
+    (,*scheme:desede*  . ,->iv-parameter)
+    ))
+
+(define (->rc2-cbc-cipher-parameter param)
+  (unless (der-sequence? param)
+    (springkussen-assertion-violation '->rc2-cbc-cipher-parameter
+				      "Unknown param" param))
+  (let-values (((version iv) (apply values (asn1-collection-elements param))))
+    (let ((v (der-integer-value version)))
+      (make-cipher-parameter
+       (make-pbe-cipher-key-size-parameter (case v
+					     ((160) 5)
+					     ((120) 8)
+					     ((58) 16)
+					     (else (div v 8))))
+       (make-iv-paramater (der-octet-string-value iv))))))
+
+(define (->rc5-cbc-cipher-parameter param)
+  (unless (der-sequence? param)
+    (springkussen-assertion-violation '->rc2-cbc-cipher-parameter
+				      "Unknown param" param))
+  (let-values (((version round block-size iv)
+		(apply values (asn1-collection-elements param))))
+    (make-cipher-parameter
+     (make-iv-paramater (der-octet-string-value iv))
+     (make-round-parameter (der-integer-value round)))))
+  
+(define (->iv-cipher-parameter param)
+  (make-iv-paramater (der-octet-string-value param)))
+(define *cipher-parameter*
+  `(
+    (,*scheme:rc2*     . ,->rc2-cbc-cipher-parameter)
+    (,*scheme:rc5*     . ,->rc5-cbc-cipher-parameter)
+    (,*scheme:aes-128* . ,->iv-cipher-parameter)
+    (,*scheme:aes-192* . ,->iv-cipher-parameter)
+    (,*scheme:aes-256* . ,->iv-cipher-parameter)
+    (,*scheme:des*     . ,->iv-cipher-parameter)
+    (,*scheme:desede*  . ,->iv-cipher-parameter)
+    ))
+    
+
 (define *reverse-enc-oids* (map (lambda (e) (cons (cdr e) (car e))) *enc-oids*))
-(define (make-pbes2-encryption-scheme scheme iv)
+(define (make-pbes2-encryption-scheme scheme iv key-length)
   (make-algorithm-identifier
    (make-der-object-identifier
     (cond ((assq scheme *reverse-enc-oids*) => cdr)
 	  (else (springkussen-assertion-violation 'make-pbes2-encryption-scheme
 						  "Unknown scheme" scheme))))
-   (make-der-octet-string iv)))
+   (cond ((assq scheme *enc-parameter*) =>
+	  (lambda (s) ((cdr s) iv key-length)))
+	 (else (springkussen-assertion-violation 'make-pbes2-encryption-scheme
+						  "Unknown scheme" scheme)))))
 
 (define *prf-oids*
   `(("1.2.840.113549.2.7"  . ,*digest:sha1*)
