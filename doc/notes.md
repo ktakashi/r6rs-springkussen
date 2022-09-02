@@ -53,3 +53,16 @@ comparing to modern cryptographic libraries. For example, Java JCE uses
 Scheme implementations are native compilers and using `100000` iteration
 may end up over `200000000` loop of digest, which takes unbearable amount
 of time to compute.
+
+
+PKCS#12 keystore
+----------------
+
+PKCS#12 keystore allow us to create non encrypted content info. For example,
+Java's SUN provider puts two content info containers, one for encrypted keys
+and another one for certificates. It only encrypts the latter and the first
+one are not encrypted as the content itself is encrypted.
+
+We don't follow the above example, but we encrypt the entire content. In
+this way, it doesn't show what kind of entry the keystore contains by 
+dumping the ASN.1 format.

@@ -22,6 +22,19 @@ Below is an example to load and retrieves keys.
 
 For more examples, see [examples/keystore](./examples/keystore).
 
+PKCS#12 keystore
+----------------
+
+PKCS#12 keystore is widely used keystore, however the specification,
+a.k.a [RFC 7292](https://datatracker.ietf.org/doc/html/rfc7292),
+does not specify how it should be used. It only specify the structure
+of the file format.
+
+This library tries to support common usage of the format, such as
+private key with certificate chain, trusted certificate entry. Also
+it supports other entry types, like CRL, which is not supported by
+a lot of PKCS#12 tools.
+
 ###### [Procedure] `pkcs12-keystore?` _obj_
 
 Returns `#t` if the given _obj_ is a PKCS#12 keystore, otherwise `#f`.
@@ -97,8 +110,9 @@ _keystore_.
 If the _password_ is provided, which is highly recommended, then the procedure
 encrypts the _private-key_ with specified _encryption-algorithm_.  
 The default value of the _encryption-algorithm_ is
-`*pbes2-aes256-cbc-pad/hmac-sha256*`. Users can change it to less secure
-ones for backward compatibility.
+`*pbes2-aes256-cbc-pad/hmac-sha256*`. Users can change it to
+predefined less secure ones for backward compatibility or custom one to
+obtain better security.
 
 ###### [Procedure] `pkcs12-keystore-private-key-delete!` _keystore_ _alias_
 
@@ -189,8 +203,9 @@ _keystore_.
 If the _password_ is provided, which is highly recommended, then the procedure
 encrypts the _private-key_ with specified _encryption-algorithm_.  
 The default value of the _encryption-algorithm_ is
-`*pbes2-aes256-cbc-pad/hmac-sha256*`. Users can change it to less secure
-ones for backward compatibility.
+`*pbes2-aes256-cbc-pad/hmac-sha256*`. Users can change it to
+predefined less secure ones for backward compatibility or custom one to
+obtain better security.
 
 ###### [Procedure] `pkcs12-keystore-secret-key-delete!` _keystore_ _alias_
 
@@ -350,6 +365,10 @@ Creates encryption algorithm of PBES2. The supporting encryption schemes are
 - `*scheme:aes-128*`
 - `*scheme:aes-192*`
 - `*scheme:aes-256*`
+- `*scheme:rc2*`
+- `*scheme:rc5*`
+- `*scheme:des*`
+- `*scheme:desede*`
 
 The procedure doesnt' check key length if it's appropriate for the given
 _encryption-scheme_. It's users' responsibility to provide a proper size.
@@ -357,3 +376,6 @@ _encryption-scheme_. It's users' responsibility to provide a proper size.
 This procedure must be used with greate care, especially the _iteration_.
 By default this library uses `1000`, and it is recommended to use larger 
 number, if you want to make a custom one.
+
+NOTE: It is **NOT** recommended to use `RC2`, `RC5`, `DES` or `DESEde`,
+those are supported for completeness and compatibility purpose.
