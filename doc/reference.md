@@ -20,6 +20,7 @@ Below is the list of libraries:
 - [`(springkussen cipher password)`](./password.md): Password based cipher APIs
 - [`(springkussen conditions)`](./conditions.md): Defines base conditions
 - [`(springkussen digest)`](./digest.md): Digest APIs
+- [`(springkussen keystore)`](./keystore.md): Keystore APIs
 - [`(springkussen mac)`](./mac.md): MAC APIs
 - [`(springkussen random)`](./random.md): Secure random generator APIs
 - [`(springkussen signature)`](./signature.md): Signer and verifier APIs
