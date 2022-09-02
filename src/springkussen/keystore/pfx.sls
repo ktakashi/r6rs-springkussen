@@ -61,6 +61,7 @@
 	    
 	    pkcs12-mac-descriptor? make-pkcs12-mac-descriptor
 
+	    pkcs12-attribute?
 	    ;; For Java trusted cert...
 	    *java-trusted-certificate-attribute*
 
@@ -69,7 +70,14 @@
 	    *pkcs12-pbe/sha1-and-des2-cbc*
 	    *pkcs12-pbe/sha1-and-rc2-128-cbc*
 	    *pkcs12-pbe/sha1-and-rc2-40-cbc*
+	    (rename (make-pbe-algorithm-identifier-provider
+		     make-pbe-encryption-algorithm))
+
+	    *pbes2-aes128-cbc-pad/hmac-sha256*
+	    *pbes2-aes192-cbc-pad/hmac-sha256*
 	    *pbes2-aes256-cbc-pad/hmac-sha256*
+	    (rename (make-pbes2-algorithm-identifier-provider
+		     make-pbes2-encryption-algorithm))
 	    )
     (import (rnrs)
 	    (springkussen asn1)
@@ -332,7 +340,8 @@
 
 (define/typed (pkcs12-keystore-alias-entries (keystore pkcs12-keystore?)
 					     (alias string?))
-  (cond ((hashtable-ref (pkcs12-keystore-aliases keystore) alias #f) => cdr)
+  (cond ((hashtable-ref (pkcs12-keystore-aliases keystore) alias #f) =>
+	 (lambda (s) (make-entry-types (cdr s))))
 	(else #f)))
 
 (define/typed (pkcs12-keystore-all-aliases (keystore pkcs12-keystore?))
@@ -406,7 +415,13 @@
        (ensure-asn1-object
 	(make-pbes2-parameter
 	 (make-pbes2-kdf-parameter salt iter dk-len md)
-	 (make-pbes2-encryption-scheme enc iv)))))))
+	 (make-pbes2-encryption-scheme enc iv dk-len)))))))
+(define *pbes2-aes128-cbc-pad/hmac-sha256*
+  (make-pbes2-algorithm-identifier-provider *digest:sha256* 16 1000 16
+					    *scheme:aes-128*))
+(define *pbes2-aes192-cbc-pad/hmac-sha256*
+  (make-pbes2-algorithm-identifier-provider *digest:sha256* 16 1000 24
+					    *scheme:aes-192*))
 (define *pbes2-aes256-cbc-pad/hmac-sha256*
   (make-pbes2-algorithm-identifier-provider *digest:sha256* 16 1000 32
 					    *scheme:aes-256*))
@@ -572,8 +587,7 @@
 (define (decrypt-encrypted-private-key-info key password)
   (let ((aid (cms-encrypted-private-key-info-encryption-algorithm key))
 	(data (cms-encrypted-private-key-info-encrypted-data key)))
-    (let-values (((cipher param)
-		  (algorithm-identifier->pbe-cipher&parameter aid)))
+    (let-values (((cipher param) (aid->cipher&key-parameter aid)))
       (bytevector->cms-private-key-info
        (symmetric-cipher:decrypt-bytevector cipher (make-pbe-key password)
 	param (der-octet-string-value data))))))
@@ -581,12 +595,8 @@
 (define (encrypt-bytevector alg prng bv password)
   (let ((key (make-pbe-key password))
 	(aid (alg prng)))
-    (let-values (((c p) (algorithm-identifier->pbe-cipher&parameter aid)))
-      (values (symmetric-cipher:encrypt-bytevector c key p bv)
-	      aid))))
-
-(define (algorithm-identifier->pbe-cipher&parameter aid)
-  (aid->cipher&key-parameter aid))
+    (let-values (((c p) (aid->cipher&key-parameter aid)))
+      (values (symmetric-cipher:encrypt-bytevector c key p bv) aid))))
 
 ;;;; Internal implementation
 

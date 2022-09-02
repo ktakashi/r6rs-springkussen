@@ -15,9 +15,10 @@
 
 ;; CA's issuer-dn
 (define issuer-dn
-  (make-x509-distinguished-names '(CN "Springkussen CA")
+  ;; It doesn't order automatically, so put it correct order manually
+  (make-x509-distinguished-names '(C "NL")
 				 '(ST "Zuid-Holland")
-				 '(C "NL")
+				 '(CN "Springkussen CA")
 				 '(E "ktakashi@ymail.com")))
 
 (define serial-number 1) ;; make sure you have unique serial number :)
@@ -32,9 +33,9 @@
     (make-ecdsa-ec-parameter *ec-parameter:sect163k1*)))
 
 (define subject-dn
-  (make-x509-distinguished-names '(CN "Springkussen")
+  (make-x509-distinguished-names '(C "NL")
 				 '(ST "Zuid-Holland")
-				 '(C "NL")
+				 '(CN "Springkussen")
 				 '(E "ktakashi@ymail.com")))
 
 (define csr

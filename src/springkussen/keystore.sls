@@ -60,6 +60,7 @@
 	    
 	    pkcs12-mac-descriptor? make-pkcs12-mac-descriptor
 
+	    pkcs12-attribute?
 	    ;; For Java trusted cert...
 	    *java-trusted-certificate-attribute*
 
@@ -68,5 +69,10 @@
 	    *pkcs12-pbe/sha1-and-des2-cbc*
 	    *pkcs12-pbe/sha1-and-rc2-128-cbc*
 	    *pkcs12-pbe/sha1-and-rc2-40-cbc*
-	    *pbes2-aes256-cbc-pad/hmac-sha256*)
+	    make-pbe-encryption-algorithm
+
+	    *pbes2-aes128-cbc-pad/hmac-sha256*
+	    *pbes2-aes192-cbc-pad/hmac-sha256*
+	    *pbes2-aes256-cbc-pad/hmac-sha256*
+	    make-pbes2-encryption-algorithm)
     (import (springkussen keystore pfx)))

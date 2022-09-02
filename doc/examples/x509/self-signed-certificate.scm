@@ -15,9 +15,9 @@
 
 ;; For self signed certificate, subjectDN = issuerDN
 (define subject-dn
-  (make-x509-distinguished-names '(CN "Springkussen")
+  (make-x509-distinguished-names '(C "NL")
 				 '(ST "Zuid-Holland")
-				 '(C "NL")
+				 '(CN "Springkussen")
 				 '(E "ktakashi@ymail.com")))
 
 (define serial-number 1) ;; make sure you have unique serial number :)
