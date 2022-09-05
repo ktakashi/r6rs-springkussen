@@ -46,7 +46,7 @@
     ((_ lock body0 body* ...)
      (let ((m lock))
        (define (thunk) body0 body* ...)
-       (guard (e (else (mutex-release m) (raise e)))
+       (guard (e (else (lock-release m) (raise e)))
 	 (lock-acquire m #t)
 	 (let ((r (thunk)))
 	   (lock-release m)
