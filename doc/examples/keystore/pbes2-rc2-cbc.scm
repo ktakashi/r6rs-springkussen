@@ -25,7 +25,7 @@
   (make-x509-self-signed-certificate ecdsa-key-pair serial-number subject-dn validity))
 
 (define *pbes2-rc2-cbc-pad/hmac-sha1*
-  (make-pbes2-encryption-algorithm *digest:sha1* 8 1000 8 *scheme:rc2*))
+  (make-pbes2-algorithm-identifier-provider *digest:sha1* 8 1000 8 *scheme:rc2*))
 
 (define keystore-file "rc2-sha1.p12")
 (let ((keystore (pkcs12-keystore-builder)))

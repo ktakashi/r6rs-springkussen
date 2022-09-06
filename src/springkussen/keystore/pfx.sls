@@ -70,14 +70,13 @@
 	    *pkcs12-pbe/sha1-and-des2-cbc*
 	    *pkcs12-pbe/sha1-and-rc2-128-cbc*
 	    *pkcs12-pbe/sha1-and-rc2-40-cbc*
-	    (rename (make-pbe-algorithm-identifier-provider
-		     make-pbe-encryption-algorithm))
+	    make-pbe-algorithm-identifier-provider
 
+	    ;; re-export, for convenience?
 	    *pbes2-aes128-cbc-pad/hmac-sha256*
 	    *pbes2-aes192-cbc-pad/hmac-sha256*
 	    *pbes2-aes256-cbc-pad/hmac-sha256*
-	    (rename (make-pbes2-algorithm-identifier-provider
-		     make-pbes2-encryption-algorithm))
+	    make-pbes2-algorithm-identifier-provider
 	    )
     (import (rnrs)
 	    (springkussen asn1)

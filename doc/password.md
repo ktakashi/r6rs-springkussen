@@ -214,6 +214,51 @@ _digest_ must be a digest descriptor.
 
 Creates a partial parameter of HMAC for `mac->pbkdf2-prf`.
 
+
+Algorithm identifiers
+---------------------
+
+PBE is often used with PKIX, below describes some algorithm identifier
+providers of particular encryption schemes.
+
+###### [Encryption algorithm] `*pbes2-aes128-cbc-pad/hmac-sha256*`
+###### [Encryption algorithm] `*pbes2-aes192-cbc-pad/hmac-sha256*`
+###### [Encryption algorithm] `*pbes2-aes256-cbc-pad/hmac-sha256*`
+
+Encryption algorithm resolver which can be used decrypting encrypted
+private key.
+
+They are `aes128-CBC-PAD`, `aes192-CBC-PAD` and `aes256-CBC-PAD`, respectively.
+
+###### [Procedure] `make-pbes2-algorithm-identifier-provider` _digest_ _salt-size_ _iteration_ _key-length_ _encryption-scheme_
+
+_digest_ must be a digest descriptor.  
+_salt-size_ must be a non negative integer.  
+_iteration_ must be a non negative integer.  
+_key-length_ must be a non negative integer.  
+_encryption-scheme_ must be a symmetric scheme desciptor.
+
+Creates encryption algorithm of PBES2. The supporting encryption schemes are
+
+- `*scheme:aes-128*`
+- `*scheme:aes-192*`
+- `*scheme:aes-256*`
+- `*scheme:rc2*`
+- `*scheme:rc5*`
+- `*scheme:des*`
+- `*scheme:desede*`
+
+The procedure doesnt' check key length if it's appropriate for the given
+_encryption-scheme_. It's users' responsibility to provide a proper size.
+
+This procedure must be used with greate care, especially the _iteration_.
+By default this library uses `1000`, and it is recommended to use larger 
+number, if you want to make a custom one.
+
+NOTE: It is **NOT** recommended to use `RC2`, `RC5`, `DES` or `DESEde`,
+those are supported for completeness and compatibility purpose.
+
+
 Re-exported bindings
 --------------------
 

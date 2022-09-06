@@ -25,7 +25,7 @@
   (make-x509-self-signed-certificate ecdsa-key-pair serial-number subject-dn validity))
 
 (define *pbes2-des3-cbc-pad/hmac-sha1*
-  (make-pbes2-encryption-algorithm *digest:sha1* 8 1000 24 *scheme:desede*))
+  (make-pbes2-algorithm-identifier-provider *digest:sha1* 8 1000 24 *scheme:desede*))
 
 (define keystore-file "des3-sha1.p12")
 (let ((keystore (pkcs12-keystore-builder)))
