@@ -206,6 +206,7 @@
 	    cms-one-asymmetric-key-public-key
 	    asn1-object->cms-one-asymmetric-key
 	    bytevector->cms-one-asymmetric-key
+	    cms-one-asymmetric-key->bytevector
 	    cms-one-asymmetric-key->private-key
 	    private-key->cms-one-asymmetric-key
 	    
@@ -213,19 +214,29 @@
 	    cms-private-key-info?
 	    asn1-object->cms-private-key-info
 	    bytevector->cms-private-key-info
+	    cms-private-key-info->bytevector
 	    cms-private-key-info->private-key
 	    private-key->cms-private-key-info
 
 	    cms-encrypted-private-key-info? make-cms-encrypted-private-key-info
 	    cms-encrypted-private-key-info-encryption-algorithm
 	    cms-encrypted-private-key-info-encrypted-data
-	    asn1-object->cms-encrypted-private-key-info)
+	    asn1-object->cms-encrypted-private-key-info
+	    bytevector->cms-encrypted-private-key-info
+	    cms-encrypted-private-key-info->bytevector
+	    cms-encrypted-private-key-info->private-key
+	    private-key->cms-encrypted-private-key-info
+	    )
     (import (rnrs)
 	    (springkussen asn1)
 	    (springkussen cms types)
 	    (springkussen cms akp)
 	    (springkussen cipher symmetric)
-	    (springkussen misc lambda))
+	    (springkussen cipher password)
+	    (springkussen misc lambda)
+	    (springkussen random)
+	    (springkussen signature) ;; for private-key?
+	    (springkussen x509 algorithm-identifier))
 
 (define (cms-data-content-info? obj)
   (and (cms-content-info? obj)
@@ -271,5 +282,39 @@
       (and c
 	   (symmetric-cipher:decrypt-bytevector cipher key parameter
 						(der-octet-string-value c)))))))
+
+(define/typed (cms-encrypted-private-key-info->private-key
+	       (encrypted-private-key-info cms-encrypted-private-key-info?)
+	       (key symmetric-key?))
+  (define aid
+    (cms-encrypted-private-key-info-encryption-algorithm
+     encrypted-private-key-info))
+  (define data
+    (cms-encrypted-private-key-info-encrypted-data encrypted-private-key-info))
+  (let-values (((cipher parameter)
+		(algorithm-identifier->cipher&parameters aid)))
+    (cms-one-asymmetric-key->private-key
+     (bytevector->cms-one-asymmetric-key
+      (symmetric-cipher:decrypt-bytevector cipher key parameter
+					   (der-octet-string-value data))))))
+
+(define private-key->cms-encrypted-private-key-info
+  (case-lambda/typed
+   ((private-key kek)
+    (private-key->cms-encrypted-private-key-info
+     private-key kek *pbes2-aes256-cbc-pad/hmac-sha256*))
+   ((private-key kek algorithm-provider)
+    (private-key->cms-encrypted-private-key-info
+     private-key kek algorithm-provider default-random-generator))
+   (((private-key private-key?) (kek symmetric-key?)
+     algorithm-provider (prng random-generator?))
+    (let ((pki (private-key->cms-one-asymmetric-key private-key))
+	  (aid (algorithm-provider prng)))
+      (let-values (((cipher parameter)
+		    (algorithm-identifier->cipher&parameters aid)))
+	(make-cms-encrypted-private-key-info aid
+	 (make-der-octet-string 
+	  (symmetric-cipher:encrypt-bytevector
+	   cipher kek parameter (cms-one-asymmetric-key->bytevector pki)))))))))
 
 )

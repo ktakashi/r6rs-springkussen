@@ -242,11 +242,9 @@
   (define (err)
     (springkussen-assertion-violation 'ecdsa-private-key-importer
 				      "Invalid ECDSA private key format"))
-  (define (find-tag-obj objs n)
-    (exists (lambda (obj)
-	      (and (der-tagged-object? obj)
-		   (= (der-tagged-object-tag-no obj) n)
-		   (der-tagged-object-obj obj))) objs))
+  (define (find-tag-obj seq n)
+    (cond ((asn1-collection:find-tagged-object seq n) => der-tagged-object-obj)
+	  (else #f)))
 
   (let ((obj (bytevector->asn1-object bv)))
     (unless (der-sequence? obj) (err))
@@ -255,17 +253,18 @@
       (let ((first (car e)))
 	(unless (and (der-integer? first)
 		     (= (der-integer-value first) 1)) (err))
-	(let ((tag0 (find-tag-obj (cddr e) 0)))
-	  (unless tag0 (err))
+	(let ((tag0 (find-tag-obj obj 0)))
+	  (unless tag0
+	    (springkussen-assertion-violation 'ecdsa-private-key-importer
+	      "[0] parameters field is required"))
 	  (let ((param (if (der-object-identifier? tag0)
 			   (lookup-named-curve-parameter tag0)
 			   (->specified-ec-domain tag0))))
-	    
 	    (make-ecdsa-private-key
 	     (bytevector->uinteger (der-octet-string-value (cadr e))
 				   (endianness big))
 	     param
-	     (let ((p (find-tag-obj (cddr e) 1)))
+	     (let ((p (find-tag-obj obj 1)))
 	       (and p (make-ecdsa-public-key
 		       (decode-ec-point (ec-parameter-curve param)
 					(der-octet-string-value p))

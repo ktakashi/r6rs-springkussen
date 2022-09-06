@@ -89,8 +89,7 @@
 	    (springkussen mac)
 	    (springkussen random)
 	    (springkussen signature)
-	    (except (springkussen x509) make-x509-time make-x509-validity)
-	    (springkussen x509 types) ;; for algorithm-identifier?
+	    (springkussen x509)
 	    (springkussen misc bytevectors)
 	    (springkussen misc lambda)
 	    (springkussen misc record))
@@ -403,28 +402,8 @@
       (unless (hashtable-ref aliases alias #t)
 	(hashtable-delete! aliases alias)))))
 
-(define *pbes2-oid* (make-der-object-identifier "1.2.840.113549.1.5.13"))
 (define (ensure-asn1-object o)
   (bytevector->asn1-object (asn1-object->bytevector o)))
-(define (make-pbes2-algorithm-identifier-provider md salt-size iter dk-len enc)
-  (lambda (prng)
-    (let* ((salt (random-generator:read-random-bytes prng salt-size))
-	   (iv-size (symmetric-scheme-descriptor-block-size enc))
-	   (iv (random-generator:read-random-bytes prng iv-size)))
-      (make-algorithm-identifier *pbes2-oid*
-       (ensure-asn1-object
-	(make-pbes2-parameter
-	 (make-pbes2-kdf-parameter salt iter dk-len md)
-	 (make-pbes2-encryption-scheme enc iv dk-len)))))))
-(define *pbes2-aes128-cbc-pad/hmac-sha256*
-  (make-pbes2-algorithm-identifier-provider *digest:sha256* 16 1000 16
-					    *scheme:aes-128*))
-(define *pbes2-aes192-cbc-pad/hmac-sha256*
-  (make-pbes2-algorithm-identifier-provider *digest:sha256* 16 1000 24
-					    *scheme:aes-192*))
-(define *pbes2-aes256-cbc-pad/hmac-sha256*
-  (make-pbes2-algorithm-identifier-provider *digest:sha256* 16 1000 32
-					    *scheme:aes-256*))
 
 (define (make-pbe-algorithm-identifier-provider oid salt-size iter)
   (define der-oid (make-der-object-identifier oid))
@@ -1085,11 +1064,7 @@
 
 
 (define (aid->cipher&key-parameter aid)
-  (define oid
-    (der-object-identifier-value (algorithm-identifier-algorithm aid)))
-  ((cond ((assoc oid *oid-cipher-creator*) => cdr)
-	 (else (springkussen-error 'aid->cipher&key-parameter
-				   "Unknown OID" oid))) aid))
+  (algorithm-identifier->cipher&parameters aid))
 
 ;; TODO should we make ASN.1 type for this?
 (define (aid->pbe-parameter aid)
@@ -1118,18 +1093,14 @@
 	  (iv (derive-pkcs12-key md pw S c *iv-material* iv-size)))
       (bytevector-append dk iv))))
 
-(define (pbes2-cipher-creator aid)
-  (define param (algorithm-identifier-parameters aid))
-  (let ((pbes2-parameter (asn1-object->pbes2-parameter param)))
-    (pbes2-parameter->pbe-cipher&parameter pbes2-parameter)))
-
-(define *oid-cipher-creator*
-  `(("1.2.840.113549.1.12.1.3" . ,(make-pbes1-cipher-creator *scheme:desede* 24))
-    ("1.2.840.113549.1.12.1.4" . ,(make-pbes1-cipher-creator *scheme:desede* 16))
-    ("1.2.840.113549.1.12.1.5" . ,(make-pbes1-cipher-creator *scheme:rc2* 16))
-    ("1.2.840.113549.1.12.1.6" . ,(make-pbes1-cipher-creator *scheme:rc2* 5))
-    ("1.2.840.113549.1.5.13" . ,pbes2-cipher-creator)))
-
+(register-cipher&parameters-oid "1.2.840.113549.1.12.1.3"
+				(make-pbes1-cipher-creator *scheme:desede* 24))
+(register-cipher&parameters-oid "1.2.840.113549.1.12.1.4"
+				(make-pbes1-cipher-creator *scheme:desede* 16))
+(register-cipher&parameters-oid "1.2.840.113549.1.12.1.5"
+				(make-pbes1-cipher-creator *scheme:rc2* 16))
+(register-cipher&parameters-oid "1.2.840.113549.1.12.1.6"
+				(make-pbes1-cipher-creator *scheme:rc2* 5))
 
 ;;;; Appendix B. Deriving Keys and IVs from Passwords and Salt
 ;;;; Appendix B.3 More on the ID Byte

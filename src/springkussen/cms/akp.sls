@@ -41,6 +41,7 @@
 	    cms-one-asymmetric-key-public-key
 	    asn1-object->cms-one-asymmetric-key
 	    bytevector->cms-one-asymmetric-key
+	    cms-one-asymmetric-key->bytevector
 	    cms-one-asymmetric-key->private-key
 	    private-key->cms-one-asymmetric-key
 
@@ -48,13 +49,16 @@
 	    cms-private-key-info?
 	    asn1-object->cms-private-key-info
 	    bytevector->cms-private-key-info
+	    cms-private-key-info->bytevector
 	    cms-private-key-info->private-key
 	    private-key->cms-private-key-info
 	    
 	    cms-encrypted-private-key-info? make-cms-encrypted-private-key-info
 	    cms-encrypted-private-key-info-encryption-algorithm
 	    cms-encrypted-private-key-info-encrypted-data
-	    asn1-object->cms-encrypted-private-key-info)
+	    asn1-object->cms-encrypted-private-key-info
+	    bytevector->cms-encrypted-private-key-info
+	    cms-encrypted-private-key-info->bytevector)
     (import (rnrs)
 	    (springkussen asn1)
 	    (springkussen conditions)
@@ -63,7 +67,7 @@
 	    (springkussen misc lambda)
 	    (springkussen signature) ;; for key operation
 	    (springkussen signature ecdsa key)
-	    (springkussen x509 types))
+	    (springkussen x509))
 
 ;; OneAsymmetricKey ::= SEQUENCE {
 ;;   version                   Version,
@@ -115,12 +119,35 @@
 
 (define (bytevector->cms-one-asymmetric-key bv)
   (asn1-object->cms-one-asymmetric-key (bytevector->asn1-object bv)))
+(define/typed (cms-one-asymmetric-key->bytevector
+	       (cms-one-asymmetric-key cms-one-asymmetric-key?))
+  (asn1-object->bytevector cms-one-asymmetric-key))
 
 (define (oid->private-key-operation oid)
   (cond ((string=? oid "1.2.840.10045.2.1") *private-key-operation:ecdsa*)
 	((string=? oid "1.2.840.113549.1.1.1") *private-key-operation:rsa*)
 	(else (springkussen-assertion-violation
 	       'oid->private-key-operation "Not supported yet" oid))))
+
+(define (ensure-named-curve bv aid op)
+  (if (eq? op *private-key-operation:ecdsa*)
+      (let ((seq (bytevector->asn1-object bv)))
+	(unless (der-sequence? seq)
+	  (springkussen-assertion-violation 'cms-one-asymmetric-key->private-key
+					    "Unknown ECDSA key format"))
+	(let ((tag0 (asn1-collection:find-tagged-object seq 0)))
+	  (if tag0
+	      bv ;; okay something is there :)
+	      (let-values (((version private-key . rest)
+			    (apply values (asn1-collection-elements seq))))
+		(asn1-object->bytevector
+		 (apply der-sequence
+			version
+			private-key
+			(make-der-tagged-object 0 #t
+			 (algorithm-identifier-parameters aid))
+			rest))))))
+      bv))
 
 (define/typed (cms-one-asymmetric-key->private-key
 	       (asymmetric-key cms-one-asymmetric-key?))
@@ -129,7 +156,10 @@
 	       (algorithm-identifier-algorithm aid)))
 	 (private-key (cms-one-asymmetric-key-private-key asymmetric-key))
 	 (op (oid->private-key-operation oid)))
-    (asymmetric-key:import-key op (der-octet-string-value private-key))))
+    (asymmetric-key:import-key op
+			       (ensure-named-curve
+				(der-octet-string-value private-key)
+				aid op))))
 
 (define/typed (private-key->cms-one-asymmetric-key (private-key private-key?))
   (define (private-key->aid private-key)
@@ -178,6 +208,9 @@
     r))
 (define (bytevector->cms-private-key-info bv)
   (asn1-object->cms-private-key-info (bytevector->asn1-object bv)))
+(define/typed (cms-private-key-info->bytevector
+	       (private-key-info cms-private-key-info?))
+  (asn1-object->bytevector private-key-info))
 
 (define cms-private-key-info->private-key cms-one-asymmetric-key->private-key)
 (define private-key->cms-private-key-info private-key->cms-one-asymmetric-key)
@@ -207,5 +240,10 @@
     (make-cms-encrypted-private-key-info
      (asn1-object->algorithm-identifier (car e))
      (cadr e))))
-    
+
+(define (bytevector->cms-encrypted-private-key-info bv)
+  (asn1-object->cms-encrypted-private-key-info (bytevector->asn1-object bv)))
+(define/typed (cms-encrypted-private-key-info->bytevector
+	       (encrypted-private-key-info cms-encrypted-private-key-info?))
+  (asn1-object->bytevector encrypted-private-key-info))
 )

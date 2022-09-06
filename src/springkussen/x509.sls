@@ -128,6 +128,19 @@
 	    x509-authority-key-identifier-authority-cert-issuer
 	    x509-authority-key-identifier-serial-number
 	    
+	    ;; Others
+	    algorithm-identifier? make-algorithm-identifier
+	    algorithm-identifier-algorithm algorithm-identifier-parameters
+	    asn1-object->algorithm-identifier
+	    algorithm-identifier->cipher&parameters
+	    register-cipher&parameters-oid	    
+
+	    subject-public-key-info? make-subject-public-key-info
+	    subject-public-key-info->public-key
+	    bytevector->subject-public-key-info
+	    subject-public-key-info->bytevector
+	    public-key->subject-public-key-info
+
 	    describe-x509-certificate
 	    )
     (import (rnrs)
@@ -272,7 +285,7 @@
      (make-x509-certificate-revocation-list
       (make-x509-certificate-list tbs #f #f)) private-key)))
 
-;; Misc
+;;; Misc
 (define describe-x509-certificate
   (case-lambda
    ((x509-certificate)

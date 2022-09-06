@@ -33,11 +33,14 @@
     (export make-algorithm-identifier algorithm-identifier?
 	    algorithm-identifier-algorithm algorithm-identifier-parameters
 	    asn1-object->algorithm-identifier ;; useful?
+	    algorithm-identifier->cipher&parameters
+	    register-cipher&parameters-oid
 
 	    make-subject-public-key-info subject-public-key-info?
 	    asn1-object->subject-public-key-info ;; useful?
 	    subject-public-key-info->public-key
 	    bytevector->subject-public-key-info
+	    subject-public-key-info->bytevector
 	    public-key->subject-public-key-info
 	    
 	    make-rdn rdn? rdn-values
@@ -66,7 +69,8 @@
 	    (springkussen asn1)
 	    (springkussen conditions)
 	    (springkussen signature)
-	    (springkussen misc bytevectors))
+	    (springkussen misc bytevectors)
+	    (springkussen x509 algorithm-identifier))
 
 (define-record-type rdn
   (parent <asn1-encodable-object>)
@@ -317,39 +321,6 @@
     (make-x509-extensions
      (map asn1-object->x509-extension (asn1-collection-elements asn1-object))))
 
-;; I'm not entirely sure if we put these here, but couldn't find
-;; any better place (on PKCS#7 specification, it says these are
-;; taken from X.509-88, so should be here, right?)
-;; AlgorithmIdentifier  ::=  SEQUENCE  {
-;;      algorithm               OBJECT IDENTIFIER,
-;;      parameters              ANY DEFINED BY algorithm OPTIONAL  }
-(define-record-type algorithm-identifier
-  (parent <asn1-encodable-object>)
-  (fields algorithm
-	  parameters)
-  (protocol (lambda (n)
-	      (case-lambda
-	       ((oid)
-		(unless (der-object-identifier? oid)
-		  (springkussen-assertion-violation 'make-algorithm-identifier
-						    "OID required" oid))
-		((n simple-asn1-encodable-object->der-sequence) oid #f))
-	       ((oid param)
-		(unless (der-object-identifier? oid)
-		  (springkussen-assertion-violation 'make-algorithm-identifier
-						    "OID required" oid))
-		(unless (asn1-object? param)
-		  (springkussen-assertion-violation 'make-algorithm-identifier
-		    "ASN1 object required" param))
-		((n simple-asn1-encodable-object->der-sequence) oid param))))))
-
-(define (asn1-object->algorithm-identifier asn1-object)
-  (unless (der-sequence? asn1-object)
-    (springkussen-assertion-violation 'asn1-object->algorithm-identifier
-				      "Invalid format" asn1-object))
-  (let ((e (asn1-collection-elements asn1-object)))
-    (apply make-algorithm-identifier e)))
-
 ;; SubjectPublicKeyInfo  ::=  SEQUENCE  {
 ;;      algorithm            AlgorithmIdentifier,
 ;;      subjectPublicKey     BIT STRING  }
@@ -385,6 +356,9 @@
 (define (bytevector->subject-public-key-info bv)
   (asn1-object->subject-public-key-info
    (bytevector->asn1-object bv)))
+(define (subject-public-key-info->bytevector spki)
+  (asn1-object->bytevector spki))
+
 (define (public-key->subject-public-key-info public-key)
   (bytevector->subject-public-key-info
    (signature:export-asymmetric-key public-key)))

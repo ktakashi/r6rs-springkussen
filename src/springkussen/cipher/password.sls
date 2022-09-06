@@ -77,6 +77,11 @@
 	    make-pbes2-encryption-scheme
 	    make-pbes2-kdf-parameter
 	    pbes2-parameter->pbe-cipher&parameter
+
+	    make-pbes2-algorithm-identifier-provider
+	    *pbes2-aes128-cbc-pad/hmac-sha256*
+	    *pbes2-aes192-cbc-pad/hmac-sha256*
+	    *pbes2-aes256-cbc-pad/hmac-sha256*
 	    
 	    ;; re-export
 	    symmetric-cipher? 
@@ -127,7 +132,8 @@
 	    (springkussen cipher password scheme pbes2)
 	    (springkussen digest)
 	    (springkussen mac)
-	    (springkussen x509 types) ;; getting silly...
+	    (springkussen random)
+	    (springkussen x509 algorithm-identifier)
 	    (springkussen misc lambda))
 
 (define (make-pbe-cipher desc param)
@@ -196,12 +202,44 @@
 				(asn1-object->pbkdf2-parameters
 				 (algorithm-identifier-parameters (car aids))))
      (cadr aids))))
-;; prf != OPTIONAL for us
+
+(define default-prf
+  (make-algorithm-identifier
+   (make-der-object-identifier "1.2.840.113549.2.7")
+   (make-der-null)))
+
+(define *pbes2-oid* (make-der-object-identifier "1.2.840.113549.1.5.13"))
+(define (ensure-asn1-object o)
+  (bytevector->asn1-object (asn1-object->bytevector o)))
+(define (make-pbes2-algorithm-identifier-provider md salt-size iter dk-len enc)
+  (lambda (prng)
+    (let* ((salt (random-generator:read-random-bytes prng salt-size))
+	   (iv-size (symmetric-scheme-descriptor-block-size enc))
+	   (iv (random-generator:read-random-bytes prng iv-size)))
+      (make-algorithm-identifier *pbes2-oid*
+       (ensure-asn1-object
+	(make-pbes2-parameter
+	 (make-pbes2-kdf-parameter salt iter dk-len md)
+	 (make-pbes2-encryption-scheme enc iv dk-len)))))))
+(define *pbes2-aes128-cbc-pad/hmac-sha256*
+  (make-pbes2-algorithm-identifier-provider *digest:sha256* 16 1000 16
+					    *scheme:aes-128*))
+(define *pbes2-aes192-cbc-pad/hmac-sha256*
+  (make-pbes2-algorithm-identifier-provider *digest:sha256* 16 1000 24
+					    *scheme:aes-192*))
+(define *pbes2-aes256-cbc-pad/hmac-sha256*
+  (make-pbes2-algorithm-identifier-provider *digest:sha256* 16 1000 32
+					    *scheme:aes-256*))
+
 (define-record-type pbkdf2-parameters
   (parent <asn1-encodable-object>)
   (fields salt iteration key-length prf)
   (protocol (lambda (n)
 	      (case-lambda/typed
+	       (((salt der-octet-string?)
+		 (iteration der-integer?))
+		((n simple-asn1-encodable-object->der-sequence)
+		 salt iteration #f default-prf))
 	       (((salt der-octet-string?)
 		 (iteration der-integer?)
 		 (prf algorithm-identifier?))
@@ -216,6 +254,7 @@
 (define/typed (asn1-object->pbkdf2-parameters (asn1-object der-sequence?))
   (let ((e (asn1-collection-elements asn1-object)))
     (case (length e)
+      ((2) (make-pbkdf2-parameters (car e) (cadr e)))
       ((3)
        (make-pbkdf2-parameters (car e) (cadr e)
 			       (asn1-object->algorithm-identifier (caddr e))))
@@ -224,7 +263,8 @@
 			       (asn1-object->algorithm-identifier (cadddr e))))
       (else
        (springkussen-error 'asn1-object->pbkdf2-parameters
-			   "Unsported format" asn1-object)))))
+			   "Unsupported format" asn1-object
+			   e)))))
 		  
 
 (define/typed (pbes2-parameter->pbe-cipher&parameter
@@ -281,6 +321,13 @@
 		 (make-pbe-kdf-prf-parameter
 		  (mac->pbkdf2-prf *mac:hmac*
 				   (make-partial-hmac-parameter md))))))))))
+(define (pbes2-cipher-creator aid)
+  (define param (algorithm-identifier-parameters aid))
+  (let ((pbes2-parameter (asn1-object->pbes2-parameter param)))
+    (pbes2-parameter->pbe-cipher&parameter pbes2-parameter)))
+
+(register-cipher&parameters-oid "1.2.840.113549.1.5.13" pbes2-cipher-creator)
+				
 
 (define *enc-oids*
   `(

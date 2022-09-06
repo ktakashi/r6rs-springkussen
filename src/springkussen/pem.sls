@@ -49,7 +49,11 @@
 	    
 	    x509-certificate-signing-request-pem-object?
 	    pem-object->x509-certificate-signing-request
-	    x509-certificate-signing-request->pem-object)
+	    x509-certificate-signing-request->pem-object
+
+	    cms-encrypted-private-key-info-pem-object?
+	    pem-object->cms-encrypted-private-key-info
+	    cms-encrypted-private-key-info->pem-object)
     (import (rnrs)
 	    (springkussen asn1)
 	    (springkussen conditions)
@@ -60,7 +64,8 @@
 	    (only (springkussen x509 types)
 		  bytevector->subject-public-key-info
 		  public-key->subject-public-key-info
-		  subject-public-key-info->public-key)
+		  subject-public-key-info->public-key
+		  subject-public-key-info->bytevector)
 	    (springkussen cms))
 
 (define-syntax make-pem-object-predicate
@@ -131,7 +136,8 @@
     (cms-one-asymmetric-key->private-key
      (bytevector->cms-one-asymmetric-key obj)))
   (lambda (key)
-    (asn1-object->bytevector (private-key->cms-one-asymmetric-key key)))
+    (cms-one-asymmetric-key->bytevector
+     (private-key->cms-one-asymmetric-key key)))
   "PRIVATE KEY")
 
 (define-pem-object-procedures
@@ -139,9 +145,19 @@
   public-key?
   (lambda (obj)
     (subject-public-key-info->public-key
-     (bytevector->subject-public-key-info (pem-object-content obj))))
+     (bytevector->subject-public-key-info obj)))
   (lambda (key)
-    (asn1-object->bytevector (public-key->subject-public-key-info key)))
+    (subject-public-key-info->bytevector
+     (public-key->subject-public-key-info key)))
   "PUBLIC KEY")
+
+(define-pem-object-procedures
+  (cms-encrypted-private-key-info-pem-object?
+   pem-object->cms-encrypted-private-key-info
+   cms-encrypted-private-key-info->pem-object)
+  cms-encrypted-private-key-info?
+  bytevector->cms-encrypted-private-key-info
+  cms-encrypted-private-key-info->bytevector
+  "ENCRYPTED PRIVATE KEY")
 
 )

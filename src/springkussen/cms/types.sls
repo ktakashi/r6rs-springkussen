@@ -189,8 +189,7 @@
 	    (springkussen asn1)
 	    (springkussen conditions)
 	    (springkussen misc lambda)
-	    (except (springkussen x509) make-x509-time make-x509-validity)
-	    (springkussen x509 types))
+	    (springkussen x509))
 
 ;;;; 3. General syntex
 ;; ContentInfo ::= SEQUENCE {
