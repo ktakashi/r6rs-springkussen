@@ -29,7 +29,7 @@ body:
     attributes:
       label: Version
       description: Which version or commit hash did you use?
-      please: Please write which version you used
+      placeholder: Please write which version you used
     validations:
       required: true
   - type: dropdown
