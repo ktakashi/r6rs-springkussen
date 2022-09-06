@@ -19,3 +19,15 @@ See [./doc/README.md](./doc/README.md)
 If you are interested in enhancing the library, please also refer the
 implementation note: [Implementation notes](./doc/notes.md)
 
+Tested Implementations
+----------------------
+
+This library is tested on the below implementations
+
+- Chez Scheme
+- Sagittarius
+
+The tests are executed on CI using
+[scheme-env](https://github.com/ktakashi/scheme-env).  
+To add tested implementations, the implementation must be added to
+`scheme-env` first.
