@@ -94,7 +94,7 @@
 		       'algorithm-identifier->cipher&parameters
 		       "Unsupported OID" oid))) aid))
        (define/typed (%register-cipher&parameters-oid (oid string?)
-						     (proc procedure?))
+						      (proc procedure?))
 	 (hashtable-set! *oid-table* oid proc)
 	 proc)
        (define-syntax register
