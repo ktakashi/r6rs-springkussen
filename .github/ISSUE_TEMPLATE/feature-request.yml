@@ -1,0 +1,42 @@
+name: Feature Request
+description: File a feature request
+title: "[Feature]: "
+labels: ["feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for your feature request.
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type of feature
+      description: What kind of feature do you want
+      options:
+        - Encryption algorithm
+        - Encryption mode
+        - Digest algorithm
+        - MAC algorithm
+        - Signature algorithm
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: type-alt
+    attributes:
+      label: Other feature
+      description: Please write type of feature
+    validations:
+      required: false
+  - type: textarea
+    id: feature
+    attributes:
+      label: Description
+      description: Please tell us the detail of the feature
+      placeholder: Nice feature is needed
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
+        Up voting the feature request may work to put higher priority

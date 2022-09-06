@@ -1,0 +1,90 @@
+name: Bug Report
+description: File a bug report
+title: "[Bug]: "
+labels: ["bug", "triage"]
+assignees:
+  - ktakashi
+body:
+  - type: markdown
+    attributes:
+      value: Thank you for your bug report!
+  - type: textarea
+    id: bug-expression
+    attributes:
+      label: Your code
+      description: Tell us, what you have seen
+      placeholder: Write your code snippet caused the bug and its output
+    validations:
+      required: true
+  - type: textarea
+    id: expected-value
+    attributes:
+      label: Expected output
+      description: Instead you should get
+      placeholder: Please write what you should have seen
+    validations:
+      required: false
+  - type: input
+    id: verion
+    attributes:
+      label: Version
+      description: Which version or commit hash did you use?
+      please: Please write which version you used
+    validations:
+      required: true
+  - type: dropdown
+    id: scheme-system
+    attributes:
+      label: Scheme system
+      description: Which Scheme system did you use?
+      options:
+        - Chez Scheme
+        - Larceny
+        - Loko
+        - Mosh
+        - Racket
+        - Sagittarius
+        - Vicare
+        - Ypsilon
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: scheme-system-alt
+    attributes:
+      label: Other Scheme system
+      description: |
+        If you choose 'Other', please tell me which one you used
+      placeholder: Please type your Scheme system
+    validations:
+      required: false
+  - type: input
+    id: scheme-system-version
+    attributes:
+      label: Version of Scheme sysmtem
+      description: Which version of the Scheme system did you use?
+    validations:
+      required: false
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      description: What operation system did you use?
+      options:
+        - Windows
+        - Linux
+        - macOS
+        - Other
+    validations:
+      required: false
+  - type: input
+    id: os-alt
+    attributes:
+      label: Other operating system
+      description: |
+        If you choose 'Other', please tell me which one you used
+      placeholder: Please type your operating system
+    validations:
+      required: false
+        
+        
