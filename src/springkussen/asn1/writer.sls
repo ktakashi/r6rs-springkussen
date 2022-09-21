@@ -200,8 +200,8 @@
 
 ;; External
 (define (write-der-external de output)
-  (let ((dr (der-external-dierct-reference de))
-	(idr (der-external-indierct-reference de))
+  (let ((dr (der-external-direct-reference de))
+	(idr (der-external-indirect-reference de))
 	(dvd (der-external-data-value-descriptor de))
 	(obj (der-external-encoding de)))
     (let-values (((out e) (open-bytevector-output-port)))
@@ -407,8 +407,8 @@
 	  (asn1-encodable-object->asn1-object asn1-object) output indent))
 	;; Okay, compount with annoying definitions
 	((der-external? asn1-object)
-	 (let ((dr (der-external-dierct-reference asn1-object))
-	       (idr (der-external-indierct-reference asn1-object))
+	 (let ((dr (der-external-direct-reference asn1-object))
+	       (idr (der-external-indirect-reference asn1-object))
 	       (dvd (der-external-data-value-descriptor asn1-object))
 	       (obj (der-external-encoding asn1-object)))
 	   (put-description "der-external")

@@ -74,8 +74,8 @@
 	    
 	    EXTERNAL
 	    der-external? make-der-external
-	    der-external-dierct-reference
-	    der-external-indierct-reference
+	    der-external-direct-reference
+	    der-external-indirect-reference
 	    der-external-data-value-descriptor
 	    der-external-encoding
 	    
@@ -330,8 +330,8 @@
 ;; Der external
 (define-record-type der-external
   (parent asn1-object)
-  (fields dierct-reference
-	  indierct-reference
+  (fields direct-reference
+	  indirect-reference
 	  data-value-descriptor
 	  encoding))
 
@@ -514,12 +514,12 @@
 			      (asn1-collection-elements a)
 			      (asn1-collection-elements b))))
 	       ((der-external? a)
-		(let ((adr (der-external-dierct-reference a))
-		      (aidr (der-external-indierct-reference a))
+		(let ((adr (der-external-direct-reference a))
+		      (aidr (der-external-indirect-reference a))
 		      (advd (der-external-data-value-descriptor a))
 		      (aobj (der-external-encoding a))
-		      (bdr (der-external-dierct-reference b))
-		      (bidr (der-external-indierct-reference b))
+		      (bdr (der-external-direct-reference b))
+		      (bidr (der-external-indirect-reference b))
 		      (bdvd (der-external-data-value-descriptor b))
 		      (bobj (der-external-encoding b)))
 		  (and (equal? adr bdr)

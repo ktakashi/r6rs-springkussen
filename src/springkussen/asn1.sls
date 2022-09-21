@@ -62,8 +62,8 @@
 	    bytevector->der-object-identifier
 	    
 	    der-external? make-der-external
-	    der-external-dierct-reference
-	    der-external-indierct-reference
+	    der-external-direct-reference
+	    der-external-indirect-reference
 	    der-external-data-value-descriptor
 	    der-external-encoding
 	    
